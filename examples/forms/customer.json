@@ -1,0 +1,123 @@
+{
+  "name": "customer_entry",
+  "title": "Customer Entry",
+  "width": 640,
+  "tableSource": "customers",
+  "events": {
+    "init": "InitCustomerForm",
+    "validate": "ValidateCustomer",
+    "save": "SaveCustomer",
+    "risk_check": "AssessCustomerRisk"
+  },
+  "fields": [
+    {
+      "name": "name",
+      "label": "Name",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 30,
+      "required": true,
+      "bindTo": "customers->name",
+      "tabOrder": 1,
+      "helpText": "Full legal name, or stage name if preferred"
+    },
+    {
+      "name": "alias",
+      "label": "Alias",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 26,
+      "required": false,
+      "bindTo": "customers->alias",
+      "tabOrder": 2,
+      "helpText": "Some clients prefer a pseudonym"
+    },
+    {
+      "name": "phone",
+      "label": "Phone",
+      "mask": "(XXX)XXX-XXXX",
+      "width": 14,
+      "required": true,
+      "bindTo": "customers->phone",
+      "tabOrder": 3,
+      "inputType": "tel",
+      "helpText": "Primary contact number"
+    },
+    {
+      "name": "email",
+      "label": "Email",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 38,
+      "required": false,
+      "bindTo": "customers->email",
+      "tabOrder": 4,
+      "inputType": "email",
+      "helpText": "For sending invoices and reminders"
+    },
+    {
+      "name": "address",
+      "label": "Address",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 42,
+      "required": false,
+      "bindTo": "customers->address",
+      "tabOrder": 5,
+      "helpText": "Also useful for collection visits"
+    },
+    {
+      "name": "birth_date",
+      "label": "Birth Date",
+      "mask": "99/99/9999",
+      "width": 10,
+      "required": true,
+      "bindTo": "customers->birth_date",
+      "tabOrder": 6,
+      "inputType": "date",
+      "helpText": "Must be 18+ for most services"
+    },
+    {
+      "name": "risk_score",
+      "label": "Risk Score",
+      "mask": "999",
+      "width": 3,
+      "readOnly": true,
+      "bindTo": "customers->risk_score",
+      "tabOrder": 7,
+      "helpText": "0-100. Auto-calculated from payment history. Higher = riskier."
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 42,
+      "required": false,
+      "bindTo": "customers->notes",
+      "tabOrder": 8,
+      "helpText": "Special instructions, preferences, warnings"
+    }
+  ],
+  "buttons": [
+    {
+      "name": "save",
+      "label": "Save",
+      "action": "SaveCustomer",
+      "primary": true
+    },
+    {
+      "name": "cancel",
+      "label": "Cancel",
+      "action": "ReturnToMenu",
+      "primary": false
+    },
+    {
+      "name": "risk",
+      "label": "Assess Risk",
+      "action": "AssessCustomerRisk",
+      "primary": false
+    },
+    {
+      "name": "history",
+      "label": "Appt History",
+      "action": "ShowCustomerAppointments",
+      "primary": false
+    }
+  ]
+}

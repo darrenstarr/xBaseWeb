@@ -1,0 +1,16 @@
+{
+  "name": "db4web",
+  "tagline": "xBase interpreter for the web",
+  "theme": {
+    "background": "#0d1117",
+    "surface": "#161b22",
+    "text": "#c9d1d9",
+    "textMuted": "#8b949e",
+    "accent": "#58a6ff",
+    "accentGreen": "#3fb950",
+    "accentOrange": "#d29922",
+    "accentRed": "#da3633",
+    "border": "#30363d",
+    "font": "'Courier New', monospace"
+  }
+}

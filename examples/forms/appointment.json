@@ -1,0 +1,146 @@
+{
+  "name": "appointment_scheduler",
+  "title": "Schedule Appointment",
+  "width": 800,
+  "tableSource": "appointments",
+  "events": {
+    "init": "InitAppointmentForm",
+    "validate": "ValidateAppointment",
+    "save": "SaveAppointment",
+    "customer_selected": "OnCustomerSelected",
+    "service_selected": "OnServiceSelected"
+  },
+  "fields": [
+    {
+      "name": "customer_search",
+      "label": "Find Customer",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 30,
+      "tabOrder": 1,
+      "helpText": "Type name to search"
+    },
+    {
+      "name": "customer_name",
+      "label": "Customer",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 30,
+      "readOnly": true,
+      "bindTo": "customers->name",
+      "tabOrder": 2
+    },
+    {
+      "name": "customer_risk",
+      "label": "Risk",
+      "mask": "999",
+      "width": 3,
+      "readOnly": true,
+      "bindTo": "customers->risk_score",
+      "tabOrder": 3,
+      "helpText": "70+ requires pre-payment"
+    },
+    {
+      "name": "service_id",
+      "label": "Service",
+      "mask": "99",
+      "width": 2,
+      "required": true,
+      "bindTo": "appointments->service_id",
+      "tabOrder": 4,
+      "inputType": "select",
+      "helpText": "Select from available services"
+    },
+    {
+      "name": "service_name",
+      "label": "Service Name",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 26,
+      "readOnly": true,
+      "tabOrder": 5
+    },
+    {
+      "name": "scheduled_for",
+      "label": "Date & Time",
+      "mask": "99/99/9999 99:99",
+      "width": 16,
+      "required": true,
+      "bindTo": "appointments->scheduled_for",
+      "tabOrder": 6,
+      "inputType": "datetime-local",
+      "helpText": "Select appointment date and time"
+    },
+    {
+      "name": "duration",
+      "label": "Duration (min)",
+      "mask": "999",
+      "width": 3,
+      "readOnly": true,
+      "bindTo": "appointments->duration",
+      "tabOrder": 7,
+      "helpText": "Derived from selected service"
+    },
+    {
+      "name": "base_price",
+      "label": "Price",
+      "mask": "9999.99",
+      "width": 7,
+      "readOnly": true,
+      "tabOrder": 8,
+      "helpText": "Service base price"
+    },
+    {
+      "name": "waiver_signed",
+      "label": "Waiver Signed",
+      "mask": "XXX",
+      "width": 3,
+      "bindTo": "appointments->waiver_signed",
+      "tabOrder": 9,
+      "inputType": "checkbox",
+      "helpText": "Required for high-intensity services"
+    },
+    {
+      "name": "requires_waiver",
+      "label": "Waiver Required",
+      "mask": "XXX",
+      "width": 3,
+      "readOnly": true,
+      "tabOrder": 10,
+      "helpText": "This service legally requires a signed waiver"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 42,
+      "required": false,
+      "bindTo": "appointments->notes",
+      "tabOrder": 11,
+      "helpText": "Special instructions or preferences"
+    }
+  ],
+  "buttons": [
+    {
+      "name": "schedule",
+      "label": "Schedule",
+      "action": "SaveAppointment",
+      "primary": true
+    },
+    {
+      "name": "cancel",
+      "label": "Cancel",
+      "action": "ReturnToMenu",
+      "primary": false
+    },
+    {
+      "name": "complete",
+      "label": "Mark Complete",
+      "action": "CompleteAppointment",
+      "primary": false
+    },
+    {
+      "name": "no_show",
+      "label": "No Show",
+      "action": "MarkNoShow",
+      "primary": false
+    }
+  ]
+}

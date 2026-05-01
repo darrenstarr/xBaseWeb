@@ -1,0 +1,43 @@
+# Go
+bin/
+*.exe
+*.test
+*.out
+tmp/
+vendor/
+/tmp/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Database
+data.db
+*.db
+*.db-wal
+*.db-shm
+
+# Build artifacts
+frontend/dist/
+/tmp/db4web
+db4web
+
+# Debug test files
+*_test.go.bak
+debug_test.go

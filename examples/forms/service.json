@@ -1,0 +1,99 @@
+{
+  "name": "service_editor",
+  "title": "Service Editor",
+  "width": 600,
+  "tableSource": "services",
+  "events": {
+    "init": "InitServiceForm",
+    "validate": "ValidateService",
+    "save": "SaveService"
+  },
+  "fields": [
+    {
+      "name": "id",
+      "label": "ID",
+      "mask": "99",
+      "width": 2,
+      "readOnly": true,
+      "bindTo": "services->id",
+      "tabOrder": 1
+    },
+    {
+      "name": "name",
+      "label": "Name",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 26,
+      "required": true,
+      "bindTo": "services->name",
+      "tabOrder": 2,
+      "helpText": "The name of the service"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 50,
+      "required": true,
+      "bindTo": "services->description",
+      "tabOrder": 3,
+      "helpText": "Describe what this service entails"
+    },
+    {
+      "name": "duration",
+      "label": "Duration (min)",
+      "mask": "999",
+      "width": 3,
+      "required": true,
+      "bindTo": "services->duration",
+      "tabOrder": 4,
+      "inputType": "number",
+      "helpText": "How many minutes this service takes"
+    },
+    {
+      "name": "base_price",
+      "label": "Base Price",
+      "mask": "9999.99",
+      "width": 7,
+      "required": true,
+      "bindTo": "services->base_price",
+      "tabOrder": 5,
+      "inputType": "number",
+      "helpText": "Standard price before tax"
+    },
+    {
+      "name": "intensity",
+      "label": "Intensity (1-10)",
+      "mask": "99",
+      "width": 2,
+      "required": true,
+      "bindTo": "services->intensity",
+      "tabOrder": 6,
+      "inputType": "number",
+      "helpText": "1=mild, 10=extreme"
+    },
+    {
+      "name": "requires_waiver",
+      "label": "Requires Waiver",
+      "mask": "XXX",
+      "width": 3,
+      "bindTo": "services->requires_waiver",
+      "tabOrder": 7,
+      "inputType": "checkbox",
+      "helpText": "Does this service legally require a signed waiver?"
+    }
+  ],
+  "buttons": [
+    {
+      "name": "save",
+      "label": "Save",
+      "action": "SaveService",
+      "primary": true
+    },
+    {
+      "name": "cancel",
+      "label": "Cancel",
+      "action": "ReturnToMenu",
+      "primary": false
+    }
+  ]
+}

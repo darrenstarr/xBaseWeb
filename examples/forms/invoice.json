@@ -1,0 +1,157 @@
+{
+  "name": "invoice_view",
+  "title": "Invoice",
+  "width": 700,
+  "tableSource": "invoices",
+  "events": {
+    "init": "InitInvoiceForm",
+    "send": "SendInvoice",
+    "payment": "RecordPayment",
+    "escalate": "EscalateCollection"
+  },
+  "fields": [
+    {
+      "name": "invoice_id",
+      "label": "Invoice #",
+      "mask": "99999",
+      "width": 5,
+      "readOnly": true,
+      "bindTo": "invoices->id",
+      "tabOrder": 1
+    },
+    {
+      "name": "invoice_date",
+      "label": "Date",
+      "mask": "99/99/9999",
+      "width": 10,
+      "readOnly": true,
+      "bindTo": "invoices->invoice_date",
+      "tabOrder": 2
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "mask": "99/99/9999",
+      "width": 10,
+      "readOnly": true,
+      "bindTo": "invoices->due_date",
+      "tabOrder": 3
+    },
+    {
+      "name": "customer_name",
+      "label": "Customer",
+      "mask": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "width": 30,
+      "readOnly": true,
+      "tabOrder": 4
+    },
+    {
+      "name": "subtotal",
+      "label": "Subtotal",
+      "mask": "99999.99",
+      "width": 8,
+      "readOnly": true,
+      "bindTo": "invoices->subtotal",
+      "tabOrder": 5
+    },
+    {
+      "name": "tax",
+      "label": "Tax (8%)",
+      "mask": "9999.99",
+      "width": 7,
+      "readOnly": true,
+      "bindTo": "invoices->tax",
+      "tabOrder": 6
+    },
+    {
+      "name": "total",
+      "label": "Total",
+      "mask": "99999.99",
+      "width": 8,
+      "readOnly": true,
+      "bindTo": "invoices->total",
+      "tabOrder": 7
+    },
+    {
+      "name": "paid",
+      "label": "Paid",
+      "mask": "99999.99",
+      "width": 8,
+      "readOnly": true,
+      "bindTo": "invoices->paid",
+      "tabOrder": 8
+    },
+    {
+      "name": "balance",
+      "label": "Balance",
+      "mask": "99999.99",
+      "width": 8,
+      "readOnly": true,
+      "bindTo": "invoices->balance",
+      "tabOrder": 9
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "mask": "XXXXXXXXXXXXXXXX",
+      "width": 16,
+      "readOnly": true,
+      "bindTo": "invoices->status",
+      "tabOrder": 10
+    },
+    {
+      "name": "dunning_level",
+      "label": "Collection Level",
+      "mask": "9",
+      "width": 1,
+      "readOnly": true,
+      "bindTo": "invoices->dunning_level",
+      "tabOrder": 11,
+      "helpText": "0=none, 1=reminder, 2=final, 3=collections, 4=psychic"
+    },
+    {
+      "name": "payment_amount",
+      "label": "Payment Amount",
+      "mask": "9999.99",
+      "width": 7,
+      "tabOrder": 12,
+      "inputType": "number",
+      "helpText": "Enter payment amount to record"
+    },
+    {
+      "name": "payment_method",
+      "label": "Method",
+      "mask": "XXXXXXXXXX",
+      "width": 10,
+      "tabOrder": 13,
+      "inputType": "select",
+      "helpText": "Cash, card, crypto, barter, found_in_pocket"
+    }
+  ],
+  "buttons": [
+    {
+      "name": "send",
+      "label": "Send Invoice",
+      "action": "SendInvoice",
+      "primary": false
+    },
+    {
+      "name": "payment",
+      "label": "Record Payment",
+      "action": "RecordPayment",
+      "primary": true
+    },
+    {
+      "name": "escalate",
+      "label": "Escalate",
+      "action": "EscalateCollection",
+      "primary": false
+    },
+    {
+      "name": "print",
+      "label": "Print",
+      "action": "PrintInvoice",
+      "primary": false
+    }
+  ]
+}
