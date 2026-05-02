@@ -249,13 +249,30 @@ function App() {
       </header>
 
       {navStack.length > 0 && (
-        <div style={{ backgroundColor: t.surface || "#161b22", borderBottom: `1px solid ${t.border || "#30363d"}`, padding: "4px 24px" }}>
+        <div style={{ backgroundColor: t.surface || "#161b22", borderBottom: `1px solid ${t.border || "#30363d"}`, padding: "6px 24px", display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontFamily: t.font }}>
           <button onClick={goBack} style={{
             background: "none", border: `1px solid ${t.border || "#30363d"}`, borderRadius: 4, color: t.accent || "#58a6ff",
-            fontFamily: t.font, fontSize: 12, cursor: "pointer", padding: "4px 12px",
-          }}>&larr; Back</button>
-          <span style={{ marginLeft: 12, fontSize: 11, color: t.textMuted || "#8b949e" }}>
-            {navStack.map((v, i) => <span key={i}>{i > 0 && " / "}{v}</span>)}
+            fontFamily: t.font, fontSize: 12, cursor: "pointer", padding: "2px 10px",
+          }}>&larr;</button>
+          <span style={{ color: t.textMuted || "#8b949e" }}>
+            {navStack.map((v, i) => (
+              <span key={i}>
+                {i > 0 && <span style={{ margin: "0 4px", color: t.textMuted }}>/</span>}
+                <span
+                  onClick={() => {
+                    const target = v;
+                    setNavStack(prev => prev.slice(0, i));
+                    setCurrentProc(target);
+                    runInterpreter(target, {});
+                  }}
+                  style={{
+                    color: i < navStack.length - 1 ? t.accent : t.text,
+                    cursor: i < navStack.length - 1 ? "pointer" : "default",
+                    textDecoration: i < navStack.length - 1 ? "underline" : "none",
+                  }}
+                >{v.replace(/([A-Z])/g, ' $1').trim()}</span>
+              </span>
+            ))}
           </span>
         </div>
       )}
