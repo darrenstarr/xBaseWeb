@@ -134,10 +134,7 @@ function App() {
     }
     if (tbl === "services" && row.length >= 5) {
       input.mName = row[1] || "";
-      input.mDuration = row[2] || "";
-      input.mPrice = row[3] || "";
-      input.mIntensity = row[4] || "";
-      // Don't pass mDesc — it's used as the save trigger in EditService
+      // Don't pass other fields — they're used as save triggers in EditService
     }
     if (tbl === "services" && row.length >= 4) {
       input.mName = row[1] || "";

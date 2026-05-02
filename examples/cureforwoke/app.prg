@@ -168,7 +168,7 @@ PROCEDURE EditService
     READ
     RETURN
   ENDIF
-  IF mDesc <> ""
+  IF mDuration <> ""
     SELECT 0
     USE services ALIAS svc
     GO VAL(mId)
@@ -183,7 +183,6 @@ PROCEDURE EditService
     WAIT ""
     RETURN
   ENDIF
-  && Show edit form
   CLEAR
   @ 1, 1 SAY "--- Edit Service ---"
   @ 3, 1 SAY "Name:        " GET mName PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXX"
