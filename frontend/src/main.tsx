@@ -260,7 +260,7 @@ function App() {
         </div>
       )}
 
-      <main style={{ flex: 1, padding: 24, maxWidth: 900, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+      <main style={{ flex: 1, padding: 24, maxWidth: "95%", width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18, color: t.text || "#c9d1d9", fontWeight: "bold" }}>
             {currentProc.replace(/([A-Z])/g, ' $1').replace(/^(.)/, c => c.toUpperCase()).trim()}
