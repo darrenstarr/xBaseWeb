@@ -151,11 +151,19 @@ function App() {
           setToast("Deleted!");
           setTimeout(() => setToast(""), 2000);
           setPendingDelete(null);
-          setScreen({ ...screen!, confirm: "", lines: [], fields: [] });
-          // Refresh the current list — don't pop stack, just re-run the list procedure
-          const listProc = currentProc;
-          setCurrentProc(procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC);
-          setTimeout(() => runInterpreter(listProc, {}), 100);
+          // Refresh the list — call interpreter directly without pushing to procStack
+          const savedProc = currentProc;
+          const res = await fetch("/api/execute", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ program: "examples/cureforwoke/app.prg", procedure: savedProc, state: {} }),
+          });
+          const data = await res.json();
+          const s = data.screen as Screen;
+          setScreen(s);
+          const init: Record<string, string> = {};
+          s?.fields?.forEach((f: ScreenField) => { init[f.var] = f.value || ""; });
+          if (Object.keys(init).length > 0) setFieldVals(init);
         } catch { setToast("Delete failed"); }
       } else {
         setPendingDelete(null);
