@@ -338,15 +338,13 @@ function App() {
             <div key={i} style={{ marginTop: 8 }}>
               <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 4 }}>{f.var.replace(/^m/, "")}</div>
               {f.options ? (
-                <select value={fieldVals[f.var] ?? ""} onChange={e => setFieldVals({ ...fieldVals, [f.var]: e.target.value })}
-                  style={{
-                    backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: 4,
-                    padding: "10px 14px", fontFamily: t.font, fontSize: 16, color: t.text, outline: "none",
-                    width: Math.max((f.picture ? f.picture.length * 10 : 300), 200),
-                  }}>
-                  <option value="">-- Select --</option>
-                  {f.options.map((o, oi) => <option key={oi} value={o.value}>{o.label}</option>)}
-                </select>
+                <AutoComplete
+                  options={f.options}
+                  value={fieldVals[f.var] ?? ""}
+                  onChange={(val) => setFieldVals({ ...fieldVals, [f.var]: val })}
+                  theme={t}
+                  autoFocus={i === 0}
+                />
               ) : f.picture?.match(/9999-99-99 99:99/) ? (
                 <input autoFocus={i === 0} type="datetime-local"
                   value={(fieldVals[f.var] ?? "").replace(/^NIL$/, "")}
@@ -503,7 +501,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
 
   const clearSearch = () => {
     setSearchText("");
-    doSearch("", "");
+    doSearch("");
   };
 
   const loadMore = async (newSort?: string, newDir?: string) => {
@@ -566,7 +564,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
             </button>
             {showSearchDropdown && (
               <div style={{ position: "absolute", top: "100%", left: 0, backgroundColor: t.surface || "#161b22", border: `1px solid ${t.border}`, borderRadius: 4, zIndex: 10, minWidth: 150, marginTop: 2 }}>
-                {table.searchCols.map((sc) => (
+                {(table.searchCols ?? []).map((sc) => (
                   <label key={sc} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", cursor: "pointer", fontSize: 13, color: t.text }}
                     onMouseEnter={e => e.currentTarget.style.background = t.background || "#0d1117"}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
@@ -651,6 +649,59 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
         {!hasMore && rows.length > 0 && <div style={{ padding: 12, textAlign: "center", color: t.textMuted, fontSize: 11 }}>All {table.total || rows.length} records loaded.</div>}
         {rows.length === 0 && <div style={{ padding: 16, textAlign: "center", color: t.textMuted, fontStyle: "italic" }}>No records found.</div>}
       </div>
+    </div>
+  );
+}
+
+function AutoComplete({ options, value, onChange, theme: t, autoFocus }: {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  theme: Record<string, string>;
+  autoFocus?: boolean;
+}) {
+  const [text, setText] = React.useState(options.find(o => o.value === value)?.label ?? "");
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [open]);
+
+  // Update text when value changes externally
+  React.useEffect(() => {
+    setText(options.find(o => o.value === value)?.label ?? "");
+  }, [value, options]);
+
+  const filtered = text ? options.filter(o => o.label.toLowerCase().includes(text.toLowerCase())) : options;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <input autoFocus={autoFocus} value={text}
+        onChange={e => { setText(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search..."
+        style={{
+          backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: 4,
+          padding: "10px 14px", fontFamily: t.font, fontSize: 16, color: t.text, outline: "none",
+          width: 300, boxSizing: "border-box",
+        }} />
+      {open && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: t.surface || "#161b22", border: `1px solid ${t.border}`, borderRadius: 4, zIndex: 20, maxHeight: 250, overflowY: "auto", marginTop: 2 }}>
+          {filtered.map((o, i) => (
+            <div key={i} onClick={() => { onChange(o.value); setText(o.label); setOpen(false); }}
+              style={{ padding: "8px 12px", cursor: "pointer", fontSize: 14, color: t.text, borderBottom: i < filtered.length - 1 ? `1px solid ${t.border}` : "none" }}
+              onMouseEnter={e => e.currentTarget.style.background = t.background || "#0d1117"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >{o.label}</div>
+          ))}
+          {filtered.length === 0 && <div style={{ padding: "8px 12px", color: t.textMuted, fontSize: 13, fontStyle: "italic" }}>No matches</div>}
+        </div>
+      )}
     </div>
   );
 }
