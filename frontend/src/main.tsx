@@ -420,6 +420,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
   const [hasMore, setHasMore] = React.useState((table.total || 0) > (table.offset || 0) + (table.rows?.length || 0));
   const [searchText, setSearchText] = React.useState<string>("");
   const [searchCols, setSearchCols] = React.useState<Set<string>>(new Set(table.searchCols?.slice(0, 1) || []));
+  const [showSearchDropdown, setShowSearchDropdown] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const searchTimer = React.useRef<ReturnType<typeof setTimeout>>();
   const visibleCols = table.columns.filter(c => c.name.toUpperCase() !== "ID");
@@ -435,6 +436,14 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
       setSearchCols(new Set([(table.searchCols || [])[0]]));
     }
   }, [table]);
+
+  // Close search dropdown on outside click
+  React.useEffect(() => {
+    if (!showSearchDropdown) return;
+    const handler = () => setShowSearchDropdown(false);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [showSearchDropdown]);
 
   const doSearch = (text: string) => {
     if (!table.query) return;
@@ -521,14 +530,30 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
     <div style={{ marginTop: 8 }}>
       {/* Search bar */}
       {(table.searchCols?.length ?? 0) > 0 && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {table.searchCols.map((sc) => (
-            <label key={sc} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.textMuted, cursor: "pointer" }}>
-              <input type="checkbox" checked={searchCols.has(sc)} onChange={() => toggleSearchCol(sc)}
-                style={{ cursor: "pointer" }} />
-              {sc}
-            </label>
-          ))}
+        <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+          <div style={{ position: "relative" }}>
+            <button onClick={e => { e.stopPropagation(); setShowSearchDropdown(!showSearchDropdown); }}
+              style={{
+                backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: 4,
+                padding: "6px 10px", fontFamily: t.font, fontSize: 13, color: t.text, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}>
+              Search: {Array.from(searchCols).join(", ") || "none"} ▾
+            </button>
+            {showSearchDropdown && (
+              <div style={{ position: "absolute", top: "100%", left: 0, backgroundColor: t.surface || "#161b22", border: `1px solid ${t.border}`, borderRadius: 4, zIndex: 10, minWidth: 150, marginTop: 2 }}>
+                {table.searchCols.map((sc) => (
+                  <label key={sc} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", cursor: "pointer", fontSize: 13, color: t.text }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.background || "#0d1117"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <input type="checkbox" checked={searchCols.has(sc)} onChange={() => toggleSearchCol(sc)} />
+                    {sc}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{ position: "relative", flex: 1, maxWidth: 300 }}>
             <input value={searchText} onChange={e => handleSearchChange(e.target.value)}
               placeholder="Search..." style={{
