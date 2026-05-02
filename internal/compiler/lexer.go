@@ -466,6 +466,7 @@ var keywords = map[string]TokenType{
 	"OTHERWISE":  T_OTHERWISE,
 	"CASE":       T_CASE,
 	"ENDCASE":    T_ENDCASE,
+	"MENU":       T_MENU,
 	"MEMVAR":     T_MEMVAR,
 	"FIELD":      T_FIELD,
 	"IN":         T_IN,

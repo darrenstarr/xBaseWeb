@@ -245,6 +245,18 @@ func (s *FunctionDef) stmtNode()   {}
 
 type ReadStmt struct{}
 
+type MenuStmt struct {
+	Title string
+	Items []MenuItemNode
+}
+type MenuItemNode struct {
+	Label     string
+	Procedure string
+}
+
+func (s *MenuStmt) nodeMarker() {}
+func (s *MenuStmt) stmtNode()   {}
+
 type ConfirmStmt struct {
 	Message string
 }

@@ -197,8 +197,10 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		escaped := strings.ReplaceAll(req.Search, "'", "''")
 		for _, c := range cols {
 			c = strings.TrimSpace(c)
-			if c != "" {
-				conditions = append(conditions, fmt.Sprintf("%s LIKE '%%%s%%'", c, escaped))
+			// Sanitize column name — only allow valid identifiers
+			cleaned := sanitizeName(c)
+			if cleaned != "" {
+				conditions = append(conditions, fmt.Sprintf("%s LIKE '%%%s%%'", cleaned, escaped))
 			}
 		}
 		if len(conditions) > 0 {

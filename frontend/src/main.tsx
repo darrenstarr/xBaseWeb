@@ -6,7 +6,9 @@ interface ScreenField { row?: number; col?: number; var: string; picture?: strin
 interface TableColumn { name: string; align?: string }
 interface RowAction { label: string; procedure: string }
 interface TableData { columns: TableColumn[]; rows: string[][]; actions?: RowAction[]; keyCol?: number; query?: string; limit?: number; offset?: number; total?: number; searchCols?: string[] }
-interface Screen { lines: ScreenLine[]; fields: ScreenField[]; prompt?: string; confirm?: string; wait?: boolean; done?: boolean; result?: string; table?: TableData; title?: string; tagline?: string; nav?: Record<string, string> }
+interface Screen { lines: ScreenLine[]; fields: ScreenField[]; prompt?: string; confirm?: string; menu?: MenuDef; wait?: boolean; done?: boolean; result?: string; table?: TableData; title?: string; tagline?: string; nav?: Record<string, string> }
+interface MenuItem { label: string; procedure: string }
+interface MenuDef { title: string; items: MenuItem[] }
 
 function applyMask(raw: string, mask: string): string {
     let ri = 0, out = "";
@@ -151,7 +153,6 @@ function App() {
           setToast("Deleted!");
           setTimeout(() => setToast(""), 2000);
           setPendingDelete(null);
-          // Refresh the list — call interpreter directly without pushing to procStack
           const savedProc = currentProc;
           const res = await fetch("/api/execute", {
             method: "POST",
@@ -175,6 +176,13 @@ function App() {
     // Handle confirmation response from .prg CONFIRM
     if (screen.confirm) {
       runInterpreter(currentProc, { ...fieldVals, _confirm: confirmResult || "yes" });
+      return;
+    }
+
+    // Menu item click — navigate directly
+    if (screen.menu && directChoice) {
+      setProcStack(prev => [...prev, currentProc]);
+      runInterpreter(directChoice, {});
       return;
     }
 
@@ -254,6 +262,23 @@ function App() {
         </div>
 
         <div style={{ backgroundColor: "#0a0a0f", border: `1px solid ${t.border || "#30363d"}`, borderRadius: 8, padding: 24, fontSize: 14, lineHeight: 1.6 }}>
+          {/* Declarative menu rendering */}
+          {screen?.menu && (
+            <div>
+              {screen.menu.items.map((item, i) => (
+                <div key={i} onClick={() => handleSubmit(item.procedure)}
+                  style={{
+                    padding: "8px 12px", margin: "2px 0", borderRadius: 4, cursor: "pointer",
+                    color: t.accent || "#58a6ff", fontSize: 14,
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = t.surface || "#161b22"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >{item.label}</div>
+              ))}
+            </div>
+          )}
+
           {/* Non-table lines (menu, headers, labels) */}
           {(screen?.lines || []).map((l, i) => {
             const isMenuItem = !!l.text.match(/^\s*\d+\.\s/);

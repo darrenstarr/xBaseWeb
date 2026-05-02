@@ -3,25 +3,11 @@
 PROCEDURE MainMenu
   SET TITLE TO "The DeSantis Cure for Woke"
   SET TAGLINE TO "We'll straighten you out."
-  NAV "1" -> "CustomerMenu", "2" -> "ApptMenu", "3" -> "ServicesMenu", "4" -> "InvoiceMenu"
-  CLEAR
-  @ 1, 1 SAY "1. Customer Management"
-  @ 2, 1 SAY "2. Appointments"
-  @ 3, 1 SAY "3. Services"
-  @ 4, 1 SAY "4. Invoicing & Collections"
-  @ 6, 1 SAY "Select: " GET mChoice PICTURE "9"
-  READ
+  MENU "Main Menu" "Customer Management" -> CustomerMenu, "Appointments" -> ApptMenu, "Services" -> ServicesMenu, "Invoicing & Collections" -> InvoiceMenu
 RETURN
 
 PROCEDURE CustomerMenu
-  NAV "1" -> "AddCustomer", "2" -> "ListCustomers", "0" -> "MainMenu"
-  CLEAR
-  @ 1, 1 SAY "--- Customers ---"
-  @ 3, 1 SAY "1. Add Customer"
-  @ 4, 1 SAY "2. List Customers"
-  @ 6, 1 SAY "0. Back"
-  @ 8, 1 SAY "Select: " GET mChoice PICTURE "9"
-  READ
+  MENU "Customers" "Add Customer" -> AddCustomer, "List Customers" -> ListCustomers
 RETURN
 
 PROCEDURE AddCustomer
@@ -113,14 +99,7 @@ PROCEDURE DeleteCustomer
 RETURN
 
 PROCEDURE ApptMenu
-  NAV "1" -> "AddAppointment", "2" -> "ListAppointments", "0" -> "MainMenu"
-  CLEAR
-  @ 1, 1 SAY "--- Appointments ---"
-  @ 3, 1 SAY "1. Schedule Appointment"
-  @ 4, 1 SAY "2. List Appointments"
-  @ 6, 1 SAY "0. Back"
-  @ 8, 1 SAY "Select: " GET mChoice PICTURE "9"
-  READ
+  MENU "Appointments" "Schedule Appointment" -> AddAppointment, "List Appointments" -> ListAppointments
 RETURN
 
 PROCEDURE AddAppointment
@@ -153,14 +132,7 @@ PROCEDURE ListAppointments
 RETURN
 
 PROCEDURE ServicesMenu
-  NAV "1" -> "AddService", "2" -> "ListServices", "0" -> "MainMenu"
-  CLEAR
-  @ 1, 1 SAY "--- Services ---"
-  @ 3, 1 SAY "1. Add Service"
-  @ 4, 1 SAY "2. List Services"
-  @ 6, 1 SAY "0. Back"
-  @ 8, 1 SAY "Select: " GET mChoice PICTURE "9"
-  READ
+  MENU "Services" "Add Service" -> AddService, "List Services" -> ListServices
 RETURN
 
 PROCEDURE AddService
@@ -252,15 +224,7 @@ PROCEDURE DeleteService
 RETURN
 
 PROCEDURE InvoiceMenu
-  NAV "1" -> "ListInvoices", "2" -> "OverdueAccounts", "3" -> "GenerateInvoice", "0" -> "MainMenu"
-  CLEAR
-  @ 1, 1 SAY "--- Invoicing ---"
-  @ 3, 1 SAY "1. List Invoices"
-  @ 4, 1 SAY "2. Overdue Accounts"
-  @ 5, 1 SAY "3. Generate Invoice"
-  @ 7, 1 SAY "0. Back"
-  @ 9, 1 SAY "Select: " GET mChoice PICTURE "9"
-  READ
+  MENU "Invoicing" "List Invoices" -> ListInvoices, "Overdue Accounts" -> OverdueAccounts, "Generate Invoice" -> GenerateInvoice
 RETURN
 
 PROCEDURE ListInvoices

@@ -37,7 +37,6 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/execute", s.handleExecute)
 	s.mux.HandleFunc("GET /api/execute/{name}", s.handleExecuteProgram)
 	s.mux.HandleFunc("POST /api/page", s.handlePage)
-	// Generic data CRUD — any table
 	s.mux.HandleFunc("GET /api/data/{table}", s.handleDataList)
 	s.mux.HandleFunc("GET /api/data/{table}/{id}", s.handleDataGet)
 	s.mux.HandleFunc("POST /api/data/{table}", s.handleDataCreate)
@@ -59,6 +58,19 @@ func (s *Server) errorJSON(w http.ResponseWriter, msg string, code int) {
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
+
+func sanitizeName(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.' {
+			out = append(out, c)
+		}
+	}
+	return string(out)
+}
+
+// ─── Infrastructure endpoints ──────────────────────────────
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
@@ -83,8 +95,7 @@ func (s *Server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetForm(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("name")
-	http.ServeFile(w, r, fmt.Sprintf("examples/cureforwoke/forms/%s.json", name))
+	http.ServeFile(w, r, fmt.Sprintf("examples/cureforwoke/forms/%s.json", r.PathValue("name")))
 }
 
 func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +104,12 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 		s.errorJSON(w, "sql parameter required", 400)
 		return
 	}
-	if len(query) < 6 || strings.ToUpper(query[:6]) != "SELECT" {
+	if strings.Contains(query, ";") {
+		s.errorJSON(w, "multi-statement queries not allowed", 400)
+		return
+	}
+	trimmed := strings.TrimSpace(query)
+	if len(trimmed) < 6 || strings.ToUpper(trimmed[:6]) != "SELECT" {
 		s.errorJSON(w, "only SELECT queries allowed", 400)
 		return
 	}
@@ -126,50 +142,17 @@ func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	s.json(w, map[string]interface{}{"columns": cols, "rows": results})
 }
 
-func (s *Server) handleDataGet(w http.ResponseWriter, r *http.Request) {
-	table := r.PathValue("table")
-	id := r.PathValue("id")
-	query := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", table)
-	var row map[string]interface{}
-	rows, err := s.db.Query(query, id)
-	if err != nil {
-		s.errorJSON(w, err.Error(), 500)
-		return
-	}
-	defer rows.Close()
-	cols, _ := rows.Columns()
-	if rows.Next() {
-		vals := make([]interface{}, len(cols))
-		ptrs := make([]interface{}, len(cols))
-		for i := range vals {
-			ptrs[i] = &vals[i]
-		}
-		rows.Scan(ptrs...)
-		row = make(map[string]interface{})
-		for i, col := range cols {
-			switch v := vals[i].(type) {
-			case []byte:
-				row[col] = string(v)
-			default:
-				row[col] = v
-			}
-		}
-	}
-	if row == nil {
-		s.errorJSON(w, "not found", 404)
-		return
-	}
-	s.json(w, row)
-}
-
-// ─── Generic Data CRUD ──────────────────────────────────────
+// ─── Generic Data CRUD (sanitized) ──────────────────────────
 
 func (s *Server) handleDataList(w http.ResponseWriter, r *http.Request) {
-	table := r.PathValue("table")
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id", table)
-	rows, err := s.db.Query(query)
+	table := sanitizeName(r.PathValue("table"))
+	if table == "" {
+		s.errorJSON(w, "invalid table name", 400)
+		return
+	}
+	rows, err := s.db.Query(fmt.Sprintf("SELECT * FROM %s ORDER BY id", table))
 	if err != nil {
-		s.errorJSON(w, fmt.Sprintf("table %q: %v", table, err), 400)
+		s.errorJSON(w, err.Error(), 400)
 		return
 	}
 	defer rows.Close()
@@ -196,8 +179,49 @@ func (s *Server) handleDataList(w http.ResponseWriter, r *http.Request) {
 	s.json(w, map[string]interface{}{"rows": results})
 }
 
+func (s *Server) handleDataGet(w http.ResponseWriter, r *http.Request) {
+	table := sanitizeName(r.PathValue("table"))
+	id := r.PathValue("id")
+	if table == "" {
+		s.errorJSON(w, "invalid table name", 400)
+		return
+	}
+	query := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", table)
+	rows, err := s.db.Query(query, id)
+	if err != nil {
+		s.errorJSON(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	cols, _ := rows.Columns()
+	if rows.Next() {
+		vals := make([]interface{}, len(cols))
+		ptrs := make([]interface{}, len(cols))
+		for i := range vals {
+			ptrs[i] = &vals[i]
+		}
+		rows.Scan(ptrs...)
+		row := make(map[string]interface{})
+		for i, col := range cols {
+			switch v := vals[i].(type) {
+			case []byte:
+				row[col] = string(v)
+			default:
+				row[col] = v
+			}
+		}
+		s.json(w, row)
+		return
+	}
+	s.errorJSON(w, "not found", 404)
+}
+
 func (s *Server) handleDataCreate(w http.ResponseWriter, r *http.Request) {
-	table := r.PathValue("table")
+	table := sanitizeName(r.PathValue("table"))
+	if table == "" {
+		s.errorJSON(w, "invalid table name", 400)
+		return
+	}
 	var body map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		s.errorJSON(w, "invalid JSON body", 400)
@@ -205,32 +229,36 @@ func (s *Server) handleDataCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	var cols []string
 	var vals []interface{}
-	placeholders := []string{}
+	ph := []string{}
 	for k, v := range body {
-		if k == "id" {
+		col := sanitizeName(k)
+		if col == "" || k == "id" {
 			continue
 		}
-		cols = append(cols, k)
+		cols = append(cols, col)
 		vals = append(vals, v)
-		placeholders = append(placeholders, "?")
+		ph = append(ph, "?")
 	}
 	if len(cols) == 0 {
-		s.errorJSON(w, "no fields to insert", 400)
+		s.errorJSON(w, "no fields", 400)
 		return
 	}
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-		table, strings.Join(cols, ", "), strings.Join(placeholders, ", "))
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", table, strings.Join(cols, ", "), strings.Join(ph, ", "))
 	result, err := s.db.Exec(query, vals...)
 	if err != nil {
 		s.errorJSON(w, err.Error(), 500)
 		return
 	}
-	id, _ := result.LastInsertId()
-	s.json(w, map[string]interface{}{"id": id, "status": "created"})
+	newID, _ := result.LastInsertId()
+	s.json(w, map[string]interface{}{"id": newID, "status": "created"})
 }
 
 func (s *Server) handleDataUpdate(w http.ResponseWriter, r *http.Request) {
-	table := r.PathValue("table")
+	table := sanitizeName(r.PathValue("table"))
+	if table == "" {
+		s.errorJSON(w, "invalid table name", 400)
+		return
+	}
 	id := r.PathValue("id")
 	var body map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -240,19 +268,19 @@ func (s *Server) handleDataUpdate(w http.ResponseWriter, r *http.Request) {
 	var setClauses []string
 	var vals []interface{}
 	for k, v := range body {
-		if k == "id" {
+		col := sanitizeName(k)
+		if col == "" || k == "id" {
 			continue
 		}
-		setClauses = append(setClauses, fmt.Sprintf("%s = ?", k))
+		setClauses = append(setClauses, fmt.Sprintf("%s = ?", col))
 		vals = append(vals, v)
 	}
 	if len(setClauses) == 0 {
-		s.errorJSON(w, "no fields to update", 400)
+		s.errorJSON(w, "no fields", 400)
 		return
 	}
 	vals = append(vals, id)
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = ?", table, strings.Join(setClauses, ", "))
-	_, err := s.db.Exec(query, vals...)
+	_, err := s.db.Exec(fmt.Sprintf("UPDATE %s SET %s WHERE id = ?", table, strings.Join(setClauses, ", ")), vals...)
 	if err != nil {
 		s.errorJSON(w, err.Error(), 500)
 		return
@@ -261,7 +289,11 @@ func (s *Server) handleDataUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDataDelete(w http.ResponseWriter, r *http.Request) {
-	table := r.PathValue("table")
+	table := sanitizeName(r.PathValue("table"))
+	if table == "" {
+		s.errorJSON(w, "invalid table name", 400)
+		return
+	}
 	id := r.PathValue("id")
 	intID, err := strconv.Atoi(id)
 	if err == nil {

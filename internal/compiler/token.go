@@ -75,6 +75,7 @@ const (
 	T_OTHERWISE
 	T_CASE
 	T_ENDCASE
+	T_MENU
 	T_NOT
 	T_AND
 	T_OR
@@ -214,6 +215,7 @@ var tokenNames = map[TokenType]string{
 	T_OTHERWISE:     "OTHERWISE",
 	T_CASE:          "CASE",
 	T_ENDCASE:       "ENDCASE",
+	T_MENU:          "MENU",
 	T_NOT:           "NOT",
 	T_AND:           "AND",
 	T_OR:            "OR",

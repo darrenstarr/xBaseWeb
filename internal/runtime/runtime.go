@@ -282,6 +282,13 @@ func (rt *Runtime) interactiveStmt(stmt compiler.Stmt, atGet *bool) {
 		rt.Screen.Confirm = s.Message
 		panic(readSentinel{})
 
+	case *compiler.MenuStmt:
+		rt.Screen.Menu = &MenuDef{Title: s.Title}
+		for _, item := range s.Items {
+			rt.Screen.Menu.Items = append(rt.Screen.Menu.Items, MenuItem{Label: item.Label, Procedure: item.Procedure})
+		}
+		panic(readSentinel{})
+
 	case *compiler.NavStmt:
 		rt.Screen.Nav = s.Entries
 

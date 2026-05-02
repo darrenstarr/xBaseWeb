@@ -169,6 +169,8 @@ func (p *Parser) parseStmt() Stmt {
 		return p.parseNav()
 	case T_CONFIRM:
 		return p.parseConfirm()
+	case T_MENU:
+		return p.parseMenu()
 	case T_CALL:
 		return p.parseCall()
 	case T_SET:
@@ -777,6 +779,34 @@ func (p *Parser) parseConfirm() Stmt {
 	stmt := &ConfirmStmt{}
 	if p.check(T_STRING) {
 		stmt.Message = p.next().Lexeme
+	}
+	return stmt
+}
+
+// MENU "Title" "Label" -> "Procedure", "Label2" -> "Proc2"
+func (p *Parser) parseMenu() Stmt {
+	p.next()
+	stmt := &MenuStmt{}
+	if p.check(T_STRING) {
+		stmt.Title = p.next().Lexeme
+	}
+	for !p.atEnd() && p.peek().Type == T_STRING {
+		item := MenuItemNode{}
+		item.Label = p.next().Lexeme
+		if p.check(T_ARROW) {
+			p.next()
+		} else if p.check(T_IDENTIFIER) && strings.ToUpper(p.peek().Lexeme) == "TO" {
+			p.next()
+		}
+		if p.check(T_STRING) {
+			item.Procedure = p.next().Lexeme
+		} else if p.check(T_IDENTIFIER) {
+			item.Procedure = p.next().Lexeme
+		}
+		stmt.Items = append(stmt.Items, item)
+		if p.check(T_COMMA) {
+			p.next()
+		}
 	}
 	return stmt
 }
