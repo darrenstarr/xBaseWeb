@@ -185,6 +185,30 @@ function App() {
 
     // Menu item click — navigate directly
     if (screen.menu && directChoice) {
+      // For AddAppointment, handle in frontend (fetch options, show autocomplete)
+      if (directChoice === "AddAppointment") {
+        setProcStack(prev => [...prev, currentProc]);
+        setCurrentProc("AddAppointment");
+        setFieldVals({ mCustomer: "", mService: "", mScheduled: "" });
+        try {
+          const [custData, svcData] = await Promise.all([
+            fetch("/api/data/customers").then(r => r.json()),
+            fetch("/api/data/services").then(r => r.json()),
+          ]);
+          const custOpts = (custData.rows || []).map((c: any) => ({ value: String(c.id), label: `${c.name || ""}${c.alias ? " (" + c.alias + ")" : ""}` }));
+          const svcOpts = (svcData.rows || []).map((s: any) => ({ value: String(s.id), label: `${s.name || ""} — $${parseFloat(s.base_price || "0").toFixed(0)}` }));
+          setScreen({
+            lines: [{ row: 1, col: 1, text: "Schedule Appointment" }],
+            fields: [
+              { var: "mCustomer", type: "get", picture: "9999", options: custOpts },
+              { var: "mService", type: "get", picture: "99", options: svcOpts },
+              { var: "mScheduled", type: "get", picture: "9999-99-99 99:99" },
+            ],
+            prompt: "mCustomer",
+          });
+        } catch { setScreen({ lines: [{ row: 1, col: 1, text: "Failed to load" }], fields: [], done: true }); }
+        return;
+      }
       setProcStack(prev => [...prev, currentProc]);
       runInterpreter(directChoice, {});
       return;
@@ -225,6 +249,24 @@ function App() {
       // Push current menu onto procStack so back/return works
       setProcStack(prev => [...prev, currentProc]);
       runInterpreter(target, {});
+      return;
+    }
+
+    // AddAppointment save via API
+    if (currentProc === "AddAppointment" && fieldVals.mCustomer) {
+      setLoading(true);
+      try {
+        const svc = await(await fetch(`/api/data/services/${fieldVals.mService || "1"}`)).json();
+        const duration = parseInt(svc.duration) || 60;
+        await fetch("/api/data/appointments", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customer_id: parseInt(fieldVals.mCustomer), service_id: parseInt(fieldVals.mService) || 1, scheduled_for: fieldVals.mScheduled || new Date().toISOString(), duration, status: "pending" }) });
+        setScreen({ lines: [{ row: 1, col: 1, text: "Appointment scheduled!" }], fields: [], done: true });
+        setTimeout(() => {
+          const parent = procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC;
+          runInterpreter(parent, {});
+        }, 600);
+      } catch (e: any) { setScreen({ lines: [{ row: 1, col: 1, text: `Error: ${e.message}` }], fields: [], done: true }); }
+      finally { setLoading(false); }
       return;
     }
 
