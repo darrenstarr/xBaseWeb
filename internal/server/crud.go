@@ -118,6 +118,10 @@ func (s *Server) executeProgram(w http.ResponseWriter, programPath, entryPoint s
 				}
 			}
 			table.Rows = allData
+			// Preserve search columns from interpreter's table
+			if screen.Table != nil && len(screen.Table.SearchCols) > 0 {
+				table.SearchCols = screen.Table.SearchCols
+			}
 			table.Query = screen.SQL
 			table.Offset = 0
 			table.Limit = 50
@@ -166,11 +170,13 @@ func (s *Server) executeProgram(w http.ResponseWriter, programPath, entryPoint s
 // GET /api/page — load next page for infinite scroll
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Query  string `json:"query"`
-		Limit  int    `json:"limit"`
-		Offset int    `json:"offset"`
-		Sort   string `json:"sort,omitempty"`
-		Dir    string `json:"dir,omitempty"`
+		Query     string `json:"query"`
+		Limit     int    `json:"limit"`
+		Offset    int    `json:"offset"`
+		Sort      string `json:"sort,omitempty"`
+		Dir       string `json:"dir,omitempty"`
+		Search    string `json:"search,omitempty"`
+		SearchCol string `json:"searchCol,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.errorJSON(w, "invalid request", 400)
@@ -184,6 +190,17 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 50
 	}
 	sql := req.Query
+	// Add WHERE clause for search
+	if req.Search != "" && req.SearchCol != "" {
+		where := fmt.Sprintf(" WHERE %s LIKE '%%%s%%'", req.SearchCol, strings.ReplaceAll(req.Search, "'", "''"))
+		// Insert WHERE before ORDER BY or at end
+		obIdx := strings.Index(strings.ToUpper(sql), "ORDER BY")
+		if obIdx >= 0 {
+			sql = sql[:obIdx] + where + " " + sql[obIdx:]
+		} else {
+			sql += where
+		}
+	}
 	// Strip any existing ORDER BY when a sort is requested
 	if req.Sort != "" {
 		idx := strings.Index(strings.ToUpper(sql), "ORDER BY")

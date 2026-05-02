@@ -839,6 +839,16 @@ func (p *Parser) parseRunSQL() Stmt {
 			}
 		}
 	}
+	// Optional search columns: SEARCH "Name", "Email"
+	if p.check(T_IDENTIFIER) && strings.ToUpper(p.peek().Lexeme) == "SEARCH" {
+		p.next()
+		for !p.atEnd() && p.peek().Type == T_STRING {
+			stmt.SearchCols = append(stmt.SearchCols, p.next().Lexeme)
+			if p.check(T_COMMA) {
+				p.next()
+			}
+		}
+	}
 	return stmt
 }
 

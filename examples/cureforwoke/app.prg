@@ -83,7 +83,7 @@ RETURN
 PROCEDURE ListCustomers
   CLEAR
   @ 1, 1 SAY "--- Customer List ---"
-  RUNSQL "SELECT id, name, alias, phone, risk_score FROM customers ORDER BY name, id" COLUMNS "ID", "Name", "Alias", "Phone", "Risk" ACTIONS "Edit" -> "EditCustomer", "Delete" -> "DeleteCustomer"
+  RUNSQL "SELECT id, name, alias, phone, risk_score FROM customers ORDER BY name, id" COLUMNS "ID", "Name", "Alias", "Phone", "Risk" SEARCH "Name", "Alias", "Phone", "Email" ACTIONS "Edit" -> "EditCustomer", "Delete" -> "DeleteCustomer"
 RETURN
 
 PROCEDURE DeleteCustomer

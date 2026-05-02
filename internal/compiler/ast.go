@@ -272,9 +272,10 @@ type RowActionDef struct {
 }
 
 type ExecSQLStmt struct {
-	Query   string
-	Cols    []string
-	Actions []RowActionDef
+	Query      string
+	Cols       []string
+	Actions    []RowActionDef
+	SearchCols []string
 }
 
 func (s *ExecSQLStmt) nodeMarker() {}

@@ -288,7 +288,13 @@ func (rt *Runtime) interactiveStmt(stmt compiler.Stmt, atGet *bool) {
 	case *compiler.ExecSQLStmt:
 		rt.Screen.SQL = s.Query
 		rt.Screen.Cols = s.Cols
-		rt.Screen.Result = "ACTIONS:" // marker for server to add actions
+		rt.Screen.Result = "ACTIONS:"
+		if len(s.SearchCols) > 0 {
+			if rt.Screen.Table == nil {
+				rt.Screen.Table = &TableData{}
+			}
+			rt.Screen.Table.SearchCols = s.SearchCols
+		} // marker for server to add actions
 		for _, a := range s.Actions {
 			rt.Screen.Result += a.Label + ":" + a.Procedure + ","
 		}

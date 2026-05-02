@@ -33,14 +33,15 @@ type ScreenField struct {
 }
 
 type TableData struct {
-	Columns []TableColumn `json:"columns"`
-	Rows    [][]string    `json:"rows"`
-	Actions []RowAction   `json:"actions,omitempty"`
-	KeyCol  int           `json:"keyCol,omitempty"`
-	Query   string        `json:"query,omitempty"`   // original SQL for pagination
-	Limit   int           `json:"limit,omitempty"`   // rows per page (0 = no limit)
-	Offset  int           `json:"offset,omitempty"`  // current offset
-	Total   int           `json:"total,omitempty"`   // total rows available
+	Columns    []TableColumn `json:"columns"`
+	Rows       [][]string    `json:"rows"`
+	Actions    []RowAction   `json:"actions,omitempty"`
+	KeyCol     int           `json:"keyCol,omitempty"`
+	Query      string        `json:"query,omitempty"`
+	Limit      int           `json:"limit,omitempty"`
+	Offset     int           `json:"offset,omitempty"`
+	Total      int           `json:"total,omitempty"`
+	SearchCols []string      `json:"searchCols,omitempty"` // columns searchable via SEARCH clause
 }
 
 type TableColumn struct {
