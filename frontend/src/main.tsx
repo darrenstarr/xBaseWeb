@@ -132,6 +132,13 @@ function App() {
       input.mPhone = row[3] || "";
       input.mEmail = "";
     }
+    if (tbl === "services" && row.length >= 5) {
+      input.mName = row[1] || "";
+      input.mDuration = row[2] || "";
+      input.mPrice = row[3] || "";
+      input.mIntensity = row[4] || "";
+      input.mDesc = row[5] || "";
+    }
     if (tbl === "services" && row.length >= 4) {
       input.mName = row[1] || "";
       input.mDesc = row[2] || "";
@@ -601,7 +608,8 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
                       textAlign: col.align === "right" ? "right" : col.align === "center" ? "center" : "left",
                       padding: "6px 12px", borderBottom: `1px solid ${t.border || "#30363d"}`,
                       color: t.text || "#c9d1d9", fontSize: 13,
-                      whiteSpace: "nowrap",
+                      whiteSpace: col.name === "Description" ? "normal" : "nowrap",
+                      wordBreak: col.name === "Description" ? "break-word" : undefined,
                     }}>{dataIdx >= 0 ? row[dataIdx] : ""}</td>
                   );
                 })}

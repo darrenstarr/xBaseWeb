@@ -168,36 +168,57 @@ PROCEDURE EditService
     READ
     RETURN
   ENDIF
-  SELECT 0
-  USE services ALIAS svc
-  LOCATE FOR svc->id = VAL(mId)
-  IF FOUND()
-    CLEAR
-    @ 1, 1 SAY "--- Edit Service ---"
-    @ 3, 1 SAY "Name:        " GET svc->name PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXX"
-    @ 4, 1 SAY "Description: " GET svc->desc PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    @ 5, 1 SAY "Duration:    " GET svc->duration PICTURE "999"
-    @ 6, 1 SAY "Price:       " GET svc->base_price PICTURE "9999.99"
-    @ 7, 1 SAY "Intensity:   " GET svc->intensity PICTURE "99"
-    READ
-    IF svc->name <> ""
-      REPLACE svc->name WITH svc->name
-    ENDIF
+  IF mDesc <> ""
+    SELECT 0
+    USE services ALIAS svc
+    GO VAL(mId)
+    REPLACE svc->name WITH mName
+    REPLACE svc->description WITH mDesc
+    REPLACE svc->duration WITH VAL(mDuration)
+    REPLACE svc->base_price WITH VAL(mPrice)
+    REPLACE svc->intensity WITH VAL(mIntensity)
     CLOSE DATABASES
     CLEAR
     @ 2, 1 SAY "Service updated!"
     WAIT ""
+    RETURN
+  ENDIF
+  && Show edit form
+  CLEAR
+  @ 1, 1 SAY "--- Edit Service ---"
+  @ 3, 1 SAY "Name:        " GET mName PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+  @ 4, 1 SAY "Description: " GET mDesc PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  @ 5, 1 SAY "Duration:    " GET mDuration PICTURE "999"
+  @ 6, 1 SAY "Price:       " GET mPrice PICTURE "9999.99"
+  @ 7, 1 SAY "Intensity:   " GET mIntensity PICTURE "99"
+  READ
+RETURN
+
+PROCEDURE DeleteService
+  IF _confirm == ""
+    CONFIRM "Delete this service?"
+    RETURN
+  ENDIF
+  IF _confirm == "yes"
+    SELECT 0
+    USE services ALIAS svc
+    GO VAL(mId)
+    DELETE
+    PACK
+    CLOSE DATABASES
+    CLEAR
+    @ 2, 1 SAY "Service deleted."
   ELSE
     CLEAR
-    @ 2, 1 SAY "Service not found."
-    WAIT ""
+    @ 2, 1 SAY "Delete cancelled."
   ENDIF
+  WAIT ""
 RETURN
 
 PROCEDURE ListServices
   CLEAR
   @ 1, 1 SAY "--- Service List ---"
-  RUNSQL "SELECT id, name, description, base_price, intensity FROM services ORDER BY id" COLUMNS "ID", "Name", "Description", "Price", "Intensity" ACTIONS "Edit" -> "EditService", "Delete" -> "DeleteService"
+  RUNSQL "SELECT id, name, duration, base_price, intensity, description FROM services ORDER BY id" COLUMNS "ID", "Name", "Duration", "Price", "Intensity", "Description" ACTIONS "Edit" -> "EditService", "Delete" -> "DeleteService"
 RETURN
 
 PROCEDURE DeleteService
