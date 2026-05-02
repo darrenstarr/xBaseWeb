@@ -255,24 +255,27 @@ function App() {
             fontFamily: t.font, fontSize: 12, cursor: "pointer", padding: "2px 10px",
           }}>&larr;</button>
           <span style={{ color: t.textMuted || "#8b949e" }}>
-            {procStack.map((v, i) => (
+            {[...procStack, currentProc].map((v, i) => {
+              const isLast = i === procStack.length;
+              return (
               <span key={i}>
                 {i > 0 && <span style={{ margin: "0 4px", color: t.textMuted }}>/</span>}
                 <span
                   onClick={() => {
+                    if (isLast) return;
                     const target = v;
                     setProcStack(prev => prev.slice(0, i));
                     setCurrentProc(target);
                     runInterpreter(target, {});
                   }}
                   style={{
-                    color: i < procStack.length - 1 ? t.accent : t.text,
-                    cursor: i < procStack.length - 1 ? "pointer" : "default",
-                    textDecoration: i < procStack.length - 1 ? "underline" : "none",
+                    color: isLast ? t.text : t.accent,
+                    cursor: isLast ? "default" : "pointer",
+                    textDecoration: isLast ? "none" : "underline",
                   }}
                 >{v.replace(/([A-Z])/g, ' $1').trim()}</span>
               </span>
-            ))}
+            )})}
           </span>
         </div>
       )}
