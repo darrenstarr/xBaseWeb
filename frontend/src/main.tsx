@@ -486,7 +486,8 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
                   </td>
                 )}
               </tr>
-            ))}
+            );
+          })}
           </tbody>
         </table>
         {loading && <div style={{ padding: 12, textAlign: "center", color: t.textMuted }}>Loading...</div>}
