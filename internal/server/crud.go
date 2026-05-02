@@ -184,7 +184,12 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 50
 	}
 	sql := req.Query
+	// Strip any existing ORDER BY when a sort is requested
 	if req.Sort != "" {
+		idx := strings.Index(strings.ToUpper(sql), "ORDER BY")
+		if idx >= 0 {
+			sql = sql[:idx]
+		}
 		dir := "ASC"
 		if req.Dir == "desc" {
 			dir = "DESC"

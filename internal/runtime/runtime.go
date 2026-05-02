@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/anomalyco/db4web/internal/compiler"
 )
@@ -579,6 +580,13 @@ func (rt *Runtime) execGo(s *compiler.GoStmt) {
 	if wa == nil || wa.TableName == "" {
 		return
 	}
+	if s.Expr != nil {
+		n := rt.evalExpr(s.Expr).AsInt()
+		if n > 0 {
+			wa.GoTo(n)
+		}
+		return
+	}
 	upper := strings.ToUpper(s.Pos)
 	if upper == "TOP" {
 		wa.GoTop()
@@ -620,11 +628,14 @@ func (rt *Runtime) execLocate(s *compiler.LocateStmt) {
 	if wa == nil || wa.TableName == "" || rt.DB == nil {
 		return
 	}
-	// Simple locate: scan sequentially until condition matches
+	// Build a WHERE clause from the FOR condition by evaluating the expression
+	// against known columns. Simple approach: scan all rows and evaluate FOR
+	// on each row in Go (not SQL WHERE).
 	for wa.RecNo = 1; wa.RecNo <= wa.LastRec; wa.RecNo++ {
 		wa.BOF = wa.RecNo == 1
 		wa.EOF = false
-		// Reload fields
+		// Reload fields for this row. Use rowid for iteration since SQLite
+		// doesn't guarantee sequential IDs after DELETEs.
 		rows, err := rt.DB.Query(fmt.Sprintf("SELECT * FROM %s WHERE rowid = ?", wa.TableName), wa.RecNo)
 		if err == nil {
 			cols, _ := rows.Columns()
@@ -650,7 +661,7 @@ func (rt *Runtime) execLocate(s *compiler.LocateStmt) {
 			}
 			rows.Close()
 		}
-		// Check FOR condition (or true if no condition)
+		// Check FOR condition
 		match := true
 		if s.For != nil {
 			match = rt.evalExpr(s.For).IsTruthy()
@@ -662,6 +673,99 @@ func (rt *Runtime) execLocate(s *compiler.LocateStmt) {
 	}
 	wa.Found = false
 	wa.EOF = true
+}
+
+func (rt *Runtime) evalFunc(e *compiler.FuncCallExpr) Value {
+	upper := strings.ToUpper(e.Name)
+	switch upper {
+	case "VAL":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			switch arg.Type {
+			case TypeString:
+				var n float64
+				fmt.Sscanf(arg.Str, "%f", &n)
+				return NewNumber(n)
+			case TypeNumber:
+				return arg
+			}
+		}
+		return NewNumber(0)
+	case "STR":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			return NewString(arg.String())
+		}
+		return NewString("")
+	case "UPPER":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			return NewString(strings.ToUpper(arg.String()))
+		}
+		return NewString("")
+	case "EMPTY":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			s := arg.String()
+			return NewLogical(s == "" || s == "0" || s == "NIL" || s == ".F.")
+		}
+		return NewLogical(true)
+	case "FOUND":
+		wa := rt.WorkAreas.Current()
+		return NewLogical(wa != nil && wa.Found)
+	case "EOF":
+		wa := rt.WorkAreas.Current()
+		return NewLogical(wa != nil && wa.EOF)
+	case "BOF":
+		wa := rt.WorkAreas.Current()
+		return NewLogical(wa != nil && wa.BOF)
+	case "RECNO":
+		wa := rt.WorkAreas.Current()
+		if wa != nil {
+			return NewNumber(float64(wa.RecNo))
+		}
+		return NewNumber(0)
+	case "DATE":
+		return NewString(time.Now().Format("2006-01-02"))
+	case "DTOC":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			return NewString(arg.String())
+		}
+		return NewString("")
+	case "LEFT":
+		if len(e.Args) >= 2 {
+			s := rt.evalExpr(e.Args[0]).String()
+			n := int(rt.evalExpr(e.Args[1]).AsInt())
+			if n > len(s) {
+				n = len(s)
+			}
+			return NewString(s[:n])
+		}
+		return NewString("")
+	case "IIF":
+		if len(e.Args) >= 3 {
+			cond := rt.evalExpr(e.Args[0])
+			if cond.IsTruthy() {
+				return rt.evalExpr(e.Args[1])
+			}
+			return rt.evalExpr(e.Args[2])
+		}
+		return Nil()
+	case "INT":
+		if len(e.Args) > 0 {
+			arg := rt.evalExpr(e.Args[0])
+			return NewNumber(float64(arg.AsInt()))
+		}
+		return NewNumber(0)
+	case "ALLTRIM", "TRIM":
+		if len(e.Args) > 0 {
+			return NewString(strings.TrimSpace(rt.evalExpr(e.Args[0]).String()))
+		}
+		return NewString("")
+	}
+	rt.Screen.Result = fmt.Sprintf("%s(%d args)", e.Name, len(e.Args))
+	return NewString(rt.Screen.Result)
 }
 
 // ─── Screen helpers ─────────────────────────────────────────
@@ -774,8 +878,7 @@ func (rt *Runtime) evalExpr(expr compiler.Expr) Value {
 		return Nil()
 
 	case *compiler.FuncCallExpr:
-		rt.Screen.Result = fmt.Sprintf("%s(%d args)", e.Name, len(e.Args))
-		return NewString(rt.Screen.Result)
+		return rt.evalFunc(e)
 	}
 
 	return NewString(fmt.Sprintf("expr %T", expr))

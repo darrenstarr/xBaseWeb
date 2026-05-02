@@ -381,12 +381,15 @@ func (p *Parser) parseGo() *GoStmt {
 	p.next()
 	stmt := &GoStmt{}
 	if p.check(T_IDENTIFIER) {
-		stmt.Pos = p.next().Lexeme
-	} else if p.check(T_NUMBER) {
-		stmt.Pos = p.next().Lexeme
-	} else {
-		p.error(p.peek(), "expected TOP, BOTTOM, or record number")
+		upper := strings.ToUpper(p.peek().Lexeme)
+		if upper == "TOP" || upper == "BOTTOM" {
+			stmt.Pos = p.next().Lexeme
+			return stmt
+		}
 	}
+	// Handle expressions: GO 5, GO VAL(mId), etc.
+	stmt.Expr = p.parseExpr()
+	stmt.Pos = ""
 	return stmt
 }
 

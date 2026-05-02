@@ -39,28 +39,6 @@ function cleanForMask(raw: string, mask: string): string {
 }
 
 const MAIN_MENU_PROC = "MainMenu";
-const MENU_MAP: Record<string, string> = {
-  "1": "CustomerMenu", "2": "ApptMenu", "3": "ServicesMenu", "4": "InvoiceMenu", "0": "QUIT",
-};
-const SUB_MENU_MAP: Record<string, Record<string, string>> = {
-  CustomerMenu: { "1": "AddCustomer", "2": "ListCustomers", "0": MAIN_MENU_PROC },
-  ApptMenu: { "1": "AddAppointment", "2": "ListAppointments", "0": MAIN_MENU_PROC },
-  ServicesMenu: { "1": "AddService", "2": "ListServices", "0": MAIN_MENU_PROC },
-  InvoiceMenu: { "1": "ListInvoices", "2": "OverdueAccounts", "3": "GenerateInvoice", "0": MAIN_MENU_PROC },
-};
-const PARENT_MAP: Record<string, string> = {
-  AddCustomer: "CustomerMenu", EditCustomer: "CustomerMenu",
-  ListCustomers: "CustomerMenu", DeleteCustomer: "CustomerMenu",
-  AddAppointment: "ApptMenu", EditAppointment: "ApptMenu",
-  ListAppointments: "ApptMenu", CompleteAppt: "ApptMenu",
-  CancelAppt: "ApptMenu", DeleteAppt: "ApptMenu",
-  AddService: "ServicesMenu", EditService: "ServicesMenu",
-  ListServices: "ServicesMenu", DeleteService: "ServicesMenu",
-  ListInvoices: "InvoiceMenu", RecordPayment: "InvoiceMenu",
-  DeleteInvoice: "InvoiceMenu", OverdueAccounts: "InvoiceMenu",
-  GenerateInvoice: "InvoiceMenu",
-};
-const findParentMenu = (p: string): string => PARENT_MAP[p] || MAIN_MENU_PROC;
 
 function App() {
   const [theme, setTheme] = React.useState<Record<string, string> | null>(null);
@@ -68,6 +46,7 @@ function App() {
   const [fieldVals, setFieldVals] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
   const [currentProc, setCurrentProc] = React.useState(MAIN_MENU_PROC);
+  const [procStack, setProcStack] = React.useState<string[]>([]);
   const [navStack, setNavStack] = React.useState<string[]>([]);
   const [appTitle, setAppTitle] = React.useState("db4web");
   const [appTagline, setAppTagline] = React.useState("");
@@ -90,7 +69,13 @@ function App() {
   }, []);
 
   const runInterpreter = async (proc: string, input: Record<string, string>) => {
-    setLoading(true); setCurrentProc(proc); setFieldVals({});
+    setLoading(true);
+    // Track call stack: push current proc before switching
+    if (proc !== currentProc && currentProc !== MAIN_MENU_PROC) {
+      setProcStack(prev => [...prev, currentProc]);
+    }
+    setCurrentProc(proc);
+    setFieldVals({});
     try {
       const res = await fetch("/api/execute", {
         method: "POST",
@@ -110,44 +95,60 @@ function App() {
 
   const handleRowAction = (action: RowAction, row: string[], keyCol: number) => {
     const key = row[keyCol] || "";
-    runInterpreter(action.procedure, { mId: key });
+    // Build input map from table column names to procedure variable names
+    // mId is always the key column. Additional fields use the pattern:
+    // column "name" → mName, "alias" → mAlias, "phone" → mPhone, etc.
+    const table = action.procedure.includes("Service") ? "services" : "customers";
+    // The row data comes ordered by table columns. For customers:
+    // [id, name, alias, phone, risk, ...] (without ID column displayed)
+    // For services: [id, name, description, price, intensity, ...]
+    // We pass ALL values so the procedure can use them directly
+    const input: Record<string, string> = { mId: key };
+    // Try to map known column names from the table definition
+    // Column 0 is always the key (ID), values start at column 1
+    if (table === "customers" && row.length >= 5) {
+      input.mName = row[1] || "";
+      input.mAlias = row[2] || "";
+      input.mPhone = row[3] || "";
+      input.mEmail = ""; // email isn't shown in list
+    }
+    if (table === "services" && row.length >= 4) {
+      input.mName = row[1] || "";
+      input.mDesc = row[2] || "";
+      input.mPrice = row[3] || "";
+    }
+    runInterpreter(action.procedure, input);
   };
 
   const handleSubmit = async (directChoice?: string) => {
     if (!screen) return;
     if (screen.done) {
-      runInterpreter(currentProc === MAIN_MENU_PROC ? MAIN_MENU_PROC : findParentMenu(currentProc), {});
+      // Procedure finished — go back to caller via procStack
+      if (procStack.length > 0) {
+        const parent = procStack[procStack.length - 1];
+        setProcStack(prev => prev.slice(0, -1));
+        runInterpreter(parent, {});
+      } else {
+        runInterpreter(MAIN_MENU_PROC, {});
+      }
       return;
     }
     const choice = directChoice ?? (screen.prompt ? (fieldVals[screen.prompt] || "") : "");
 
-    // Use screen.nav for menu navigation (defined in .prg via NAV statement)
+    // Navigation from NAV statement (defined in .prg)
     if (screen.nav && screen.nav[choice]) {
       const target = screen.nav[choice];
-      if (target === "QUIT" || target === "BACK") {
+      if (target === "QUIT" || target === "MainMenu") {
         setScreen({ lines: [{ row: 1, col: 1, text: target === "QUIT" ? "Goodbye!" : "" }], fields: [], done: true });
         return;
       }
+      // Push current menu onto procStack so back/return works
+      setProcStack(prev => [...prev, currentProc]);
       runInterpreter(target, {});
       return;
     }
 
-    // Check hardcoded maps as fallback (can remove once all .prg have NAV)
-    const sub = SUB_MENU_MAP[currentProc];
-    if (sub && sub[choice]) {
-      runInterpreter(sub[choice] === MAIN_MENU_PROC ? MAIN_MENU_PROC : sub[choice], {});
-      return;
-    }
-    const target = MENU_MAP[choice];
-    if (target === "QUIT") {
-      setScreen({ lines: [{ row: 1, col: 1, text: "Goodbye!" }], fields: [], done: true });
-      return;
-    }
-    if (target && currentProc === MAIN_MENU_PROC) {
-      runInterpreter(target, {});
-      return;
-    }
-    // Everything else: send current field values back to the interpreter
+    // No nav mapping — send form values back to current procedure
     runInterpreter(currentProc, fieldVals);
   };
 
@@ -267,7 +268,11 @@ function App() {
                 borderRadius: 4, color: "#fff", fontFamily: t.font, fontSize: 14, cursor: "pointer", fontWeight: "bold",
                 opacity: loading ? 0.5 : 1,
               }}>{loading ? "..." : "OK"}</button>
-              <button onClick={() => runInterpreter(findParentMenu(currentProc), {})} style={{
+              <button onClick={() => {
+                const parent = procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC;
+                setProcStack(prev => prev.slice(0, -1));
+                runInterpreter(parent, {});
+              }} style={{
                 padding: "10px 24px", backgroundColor: "transparent", border: `1px solid ${t.border || "#30363d"}`,
                 borderRadius: 4, color: t.textMuted || "#8b949e", fontFamily: t.font, fontSize: 14, cursor: "pointer",
               }}>Cancel</button>
@@ -315,20 +320,24 @@ function TableWithScroll({ table, theme: t, onRowAction }: { table: TableData; t
     setLoading(true);
     const s = newSort ?? sortCol;
     const d = newDir ?? sortDir;
-    const newOffset = newSort ? 0 : offset + rows.length;
+    const nextOffset = newSort ? 0 : offset + 50;
     try {
       const res = await fetch("/api/page", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: table.query, limit: 50, offset: newOffset, sort: s, dir: d }),
+        body: JSON.stringify({ query: table.query, limit: 50, offset: nextOffset, sort: s, dir: d }),
       });
       const data = await res.json();
-      const newRows: string[][] = (data.rows || []).map((r: any) => table.columns.map(c => String(r[c.name] ?? "")));
+      const newRows: string[][] = (data.rows || []).map((r: any) => table.columns.map(c => {
+        // API returns lowercase SQL column names, but COLUMNS in .prg may be uppercase
+        const val = r[c.name] ?? r[c.name.toLowerCase()] ?? r[c.name.toUpperCase()] ?? "";
+        return String(val);
+      }));
       if (newSort) {
         setRows(newRows);
         setOffset(0);
       } else {
         setRows(prev => [...prev, ...newRows]);
-        setOffset(newOffset);
+        setOffset(nextOffset);
       }
       setHasMore(newRows.length >= 50);
       if (newSort) { setSortCol(newSort); setSortDir(newDir || "asc"); }

@@ -50,41 +50,40 @@ PROCEDURE AddCustomer
 RETURN
 
 PROCEDURE EditCustomer
-  IF mName == ""
+  IF mName == "" .AND. mId == ""
     CLEAR
     @ 1, 1 SAY "Customer ID: " GET mId PICTURE "9999"
     READ
     RETURN
   ENDIF
-  SELECT 0
-  USE customers ALIAS cust
-  LOCATE FOR cust->id = VAL(mId)
-  IF FOUND()
-    CLEAR
-    @ 1, 1 SAY "--- Edit Customer ---"
-    @ 3, 1 SAY "Name:  " GET cust->name PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    @ 4, 1 SAY "Alias: " GET cust->alias PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXX"
-    @ 5, 1 SAY "Phone: " GET cust->phone PICTURE "(XXX)XXX-XXXX"
-    @ 6, 1 SAY "Email: " GET cust->email PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    READ
-    IF cust->name <> ""
-      REPLACE cust->name WITH cust->name
-    ENDIF
+  IF mEmail <> ""
+    SELECT 0
+    USE customers ALIAS cust
+    GO VAL(mId)
+    REPLACE cust->name WITH mName
+    REPLACE cust->alias WITH mAlias
+    REPLACE cust->phone WITH mPhone
+    REPLACE cust->email WITH mEmail
     CLOSE DATABASES
     CLEAR
     @ 2, 1 SAY "Customer updated!"
     WAIT ""
-  ELSE
-    CLEAR
-    @ 2, 1 SAY "Customer not found."
-    WAIT ""
+    RETURN
   ENDIF
+  && Show edit form with pre-filled values from row action
+  CLEAR
+  @ 1, 1 SAY "--- Edit Customer ---"
+  @ 3, 1 SAY "Name:  " GET mName PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  @ 4, 1 SAY "Alias: " GET mAlias PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+  @ 5, 1 SAY "Phone: " GET mPhone PICTURE "(XXX)XXX-XXXX"
+  @ 6, 1 SAY "Email: " GET mEmail PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  READ
 RETURN
 
 PROCEDURE ListCustomers
   CLEAR
   @ 1, 1 SAY "--- Customer List ---"
-  RUNSQL "SELECT id, name, alias, phone, risk_score FROM customers ORDER BY name" COLUMNS "ID", "Name", "Alias", "Phone", "Risk" ACTIONS "Edit" -> "EditCustomer", "Delete" -> "DeleteCustomer"
+  RUNSQL "SELECT id, name, alias, phone, risk_score FROM customers ORDER BY name, id" COLUMNS "ID", "Name", "Alias", "Phone", "Risk" ACTIONS "Edit" -> "EditCustomer", "Delete" -> "DeleteCustomer"
 RETURN
 
 PROCEDURE DeleteCustomer
@@ -147,7 +146,7 @@ RETURN
 PROCEDURE ListAppointments
   CLEAR
   @ 1, 1 SAY "--- Appointment List ---"
-  RUNSQL "SELECT a.id, c.name, s.name, a.scheduled_for, a.status FROM appointments a JOIN customers c ON c.id=a.customer_id JOIN services s ON s.id=a.service_id ORDER BY a.scheduled_for DESC" COLUMNS "ID", "Customer", "Service", "Scheduled", "Status" ACTIONS "Complete" -> "CompleteAppt", "Cancel" -> "CancelAppt", "Delete" -> "DeleteAppt"
+  RUNSQL "SELECT a.id, c.name, s.name, a.scheduled_for, a.status FROM appointments a JOIN customers c ON c.id=a.customer_id JOIN services s ON s.id=a.service_id ORDER BY a.scheduled_for DESC, a.id DESC" COLUMNS "ID", "Customer", "Service", "Scheduled", "Status" ACTIONS "Complete" -> "CompleteAppt", "Cancel" -> "CancelAppt", "Delete" -> "DeleteAppt"
 RETURN
 
 PROCEDURE ServicesMenu
@@ -188,7 +187,7 @@ PROCEDURE AddService
 RETURN
 
 PROCEDURE EditService
-  IF mName == ""
+  IF mName == "" .AND. mId == ""
     CLEAR
     @ 1, 1 SAY "Service ID: " GET mId PICTURE "99"
     READ

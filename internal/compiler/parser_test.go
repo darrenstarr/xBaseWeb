@@ -150,8 +150,12 @@ func TestParseGoRecord(t *testing.T) {
 	prog, errs := parse("GO 100")
 	assertNoErrors(t, errs)
 	goStmt := prog.Stmts[0].(*GoStmt)
-	if goStmt.Pos != "100" {
-		t.Errorf("expected Pos=100, got %q", goStmt.Pos)
+	if goStmt.Expr == nil {
+		t.Errorf("expected non-nil Expr")
+	} else if num, ok := goStmt.Expr.(*NumberExpr); !ok {
+		t.Errorf("expected NumberExpr, got %T", goStmt.Expr)
+	} else if num.IntValue != 100 {
+		t.Errorf("expected IntValue=100, got %d", num.IntValue)
 	}
 }
 

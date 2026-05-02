@@ -72,7 +72,8 @@ func (s *ZapStmt) nodeMarker() {}
 func (s *ZapStmt) stmtNode()   {}
 
 type GoStmt struct {
-	Pos string
+	Pos  string
+	Expr Expr // optional expression for GO VAL(mId) etc.
 }
 
 func (s *GoStmt) nodeMarker() {}
