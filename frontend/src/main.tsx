@@ -387,13 +387,22 @@ function App() {
 }
 
 function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table: TableData; theme: Record<string, string>; onRowAction: (act: RowAction, row: string[], keyCol: number) => void; highlightKey?: string }) {
-  const [sortCol, setSortCol] = React.useState<string>("");
-  const [sortDir, setSortDir] = React.useState<string>("asc");
   const [rows, setRows] = React.useState<string[][]>(table.rows);
   const [offset, setOffset] = React.useState(table.offset || 0);
+  const [sortCol, setSortCol] = React.useState<string>("");
+  const [sortDir, setSortDir] = React.useState<string>("asc");
   const [loading, setLoading] = React.useState(false);
   const [hasMore, setHasMore] = React.useState((table.total || 0) > (table.offset || 0) + (table.rows?.length || 0));
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync rows when table data changes (e.g. after delete)
+  React.useEffect(() => {
+    setRows(table.rows);
+    setOffset(table.offset || 0);
+    setSortCol("");
+    setSortDir("asc");
+    setHasMore((table.total || 0) > (table.offset || 0) + (table.rows?.length || 0));
+  }, [table]);
 
   const visibleCols = table.columns.filter(c => c.name.toUpperCase() !== "ID");
 
