@@ -93,24 +93,23 @@ function App() {
     } finally { setLoading(false); }
   };
 
+  const [confirmDelete, setConfirmDelete] = React.useState<{ action: RowAction; row: string[]; keyCol: number } | null>(null);
+
   const handleRowAction = (action: RowAction, row: string[], keyCol: number) => {
+    // Delete actions: show confirmation, then call API directly
+    if (action.label === "Delete") {
+      setConfirmDelete({ action, row, keyCol });
+      return;
+    }
+    // Edit actions: build input from row data
     const key = row[keyCol] || "";
-    // Build input map from table column names to procedure variable names
-    // mId is always the key column. Additional fields use the pattern:
-    // column "name" → mName, "alias" → mAlias, "phone" → mPhone, etc.
     const table = action.procedure.includes("Service") ? "services" : "customers";
-    // The row data comes ordered by table columns. For customers:
-    // [id, name, alias, phone, risk, ...] (without ID column displayed)
-    // For services: [id, name, description, price, intensity, ...]
-    // We pass ALL values so the procedure can use them directly
     const input: Record<string, string> = { mId: key };
-    // Try to map known column names from the table definition
-    // Column 0 is always the key (ID), values start at column 1
     if (table === "customers" && row.length >= 5) {
       input.mName = row[1] || "";
       input.mAlias = row[2] || "";
       input.mPhone = row[3] || "";
-      input.mEmail = ""; // email isn't shown in list
+      input.mEmail = "";
     }
     if (table === "services" && row.length >= 4) {
       input.mName = row[1] || "";
@@ -118,6 +117,29 @@ function App() {
       input.mPrice = row[3] || "";
     }
     runInterpreter(action.procedure, input);
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    const { action, row, keyCol } = confirmDelete;
+    setConfirmDelete(null);
+    const key = row[keyCol] || "";
+    const table = action.procedure.includes("Service") ? "services"
+      : action.procedure.includes("Appt") ? "appointments"
+      : action.procedure.includes("Invoice") ? "invoices"
+      : "customers";
+    setLoading(true);
+    try {
+      await fetch(`/api/data/${table}/${key}`, { method: "DELETE" });
+      // Refresh the current list view
+      setScreen({ ...screen!, lines: [{ row: 1, col: 1, text: "Deleted!" }], fields: [], done: true });
+      setTimeout(() => {
+        const parent = procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC;
+        runInterpreter(parent, {});
+      }, 500);
+    } catch (e: any) {
+      setScreen({ ...screen!, lines: [{ row: 1, col: 1, text: `Delete failed: ${e.message}` }], fields: [], done: true });
+    } finally { setLoading(false); }
   };
 
   const handleSubmit = async (directChoice?: string) => {
@@ -296,6 +318,14 @@ function App() {
           )}
         </div>
       </main>
+
+      {confirmDelete && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, backgroundColor: t.surface || "#161b22", borderBottom: `2px solid ${t.accentRed || "#da3633"}`, padding: "16px 24px", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <span style={{ color: t.text, fontSize: 14 }}>Delete this record?</span>
+          <button onClick={doDelete} style={{ padding: "6px 20px", backgroundColor: t.accentRed || "#da3633", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontFamily: t.font, fontSize: 13, fontWeight: "bold" }}>Yes, Delete</button>
+          <button onClick={() => setConfirmDelete(null)} style={{ padding: "6px 20px", backgroundColor: "transparent", border: `1px solid ${t.border}`, borderRadius: 4, color: t.textMuted, cursor: "pointer", fontFamily: t.font, fontSize: 13 }}>Cancel</button>
+        </div>
+      )}
 
       <footer style={{ textAlign: "center", padding: 12, fontSize: 11, color: t.textMuted || "#8b949e", borderTop: `1px solid ${t.border || "#30363d"}` }}>
         db4web — xBase interpreter for the web
