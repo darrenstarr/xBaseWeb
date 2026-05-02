@@ -393,10 +393,11 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
   const [sortDir, setSortDir] = React.useState<string>("asc");
   const [loading, setLoading] = React.useState(false);
   const [hasMore, setHasMore] = React.useState((table.total || 0) > (table.offset || 0) + (table.rows?.length || 0));
-  const [searchCol, setSearchCol] = React.useState<string>((table.searchCols || [])[0] || "");
   const [searchText, setSearchText] = React.useState<string>("");
+  const [searchCols, setSearchCols] = React.useState<Set<string>>(new Set(table.searchCols?.slice(0, 1) || []));
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const searchTimer = React.useRef<ReturnType<typeof setTimeout>>();
+  const visibleCols = table.columns.filter(c => c.name.toUpperCase() !== "ID");
 
   // Sync rows when table data changes (e.g. after delete)
   React.useEffect(() => {
@@ -405,16 +406,19 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
     setSortCol("");
     setSortDir("asc");
     setHasMore((table.total || 0) > (table.offset || 0) + (table.rows?.length || 0));
-    if (!searchCol && (table.searchCols || [])[0]) setSearchCol((table.searchCols || [])[0]);
+    if ((table.searchCols || []).length > 0 && searchCols.size === 0) {
+      setSearchCols(new Set([(table.searchCols || [])[0]]));
+    }
   }, [table]);
 
-  const doSearch = (col: string, text: string) => {
+  const doSearch = (text: string) => {
     if (!table.query) return;
     setLoading(true);
     const sql = table.query;
+    const cols = Array.from(searchCols);
     fetch("/api/page", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: sql, limit: 50, offset: 0, sort: sortCol, dir: sortDir, search: text, searchCol: col }),
+      body: JSON.stringify({ query: sql, limit: 50, offset: 0, sort: sortCol, dir: sortDir, search: text, searchCol: cols.join(",") }),
     }).then(r => r.json()).then(data => {
       const newRows: string[][] = (data.rows || []).map((r: any) => table.columns.map(c => String(r[c.name] ?? r[c.name.toLowerCase()] ?? r[c.name.toUpperCase()] ?? "")));
       setRows(newRows);
@@ -427,7 +431,16 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
   const handleSearchChange = (text: string) => {
     setSearchText(text);
     clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => doSearch(searchCol, text), 300);
+    searchTimer.current = setTimeout(() => doSearch(text), 300);
+  };
+
+  const toggleSearchCol = (col: string) => {
+    const next = new Set(searchCols);
+    if (next.has(col)) next.delete(col); else next.add(col);
+    if (next.size === 0) next.add(col); // keep at least one
+    setSearchCols(next);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => doSearch(searchText), 300);
   };
 
   const clearSearch = () => {
@@ -444,7 +457,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
     try {
       const res = await fetch("/api/page", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: table.query, limit: 50, offset: nextOffset, sort: s, dir: d, search: searchText, searchCol: searchCol }),
+        body: JSON.stringify({ query: table.query, limit: 50, offset: nextOffset, sort: s, dir: d, search: searchText, searchCol: Array.from(searchCols).join(",") }),
       });
       const data = await res.json();
       const newRows: string[][] = (data.rows || []).map((r: any) => table.columns.map(c => {
@@ -483,14 +496,14 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
     <div style={{ marginTop: 8 }}>
       {/* Search bar */}
       {(table.searchCols?.length ?? 0) > 0 && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
-          <select value={searchCol} onChange={e => { setSearchCol(e.target.value); doSearch(e.target.value, searchText); }}
-            style={{
-              backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: 4,
-              padding: "6px 10px", fontFamily: t.font, fontSize: 13, color: t.text, outline: "none",
-            }}>
-            {table.searchCols.map((sc, i) => <option key={i} value={sc}>{sc}</option>)}
-          </select>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {table.searchCols.map((sc) => (
+            <label key={sc} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.textMuted, cursor: "pointer" }}>
+              <input type="checkbox" checked={searchCols.has(sc)} onChange={() => toggleSearchCol(sc)}
+                style={{ cursor: "pointer" }} />
+              {sc}
+            </label>
+          ))}
           <div style={{ position: "relative", flex: 1, maxWidth: 300 }}>
             <input value={searchText} onChange={e => handleSearchChange(e.target.value)}
               placeholder="Search..." style={{

@@ -819,6 +819,16 @@ func (p *Parser) parseRunSQL() Stmt {
 			}
 		}
 	}
+	// Optional search columns: SEARCH "Name", "Email"
+	if p.check(T_IDENTIFIER) && strings.ToUpper(p.peek().Lexeme) == "SEARCH" {
+		p.next()
+		for !p.atEnd() && p.peek().Type == T_STRING {
+			stmt.SearchCols = append(stmt.SearchCols, p.next().Lexeme)
+			if p.check(T_COMMA) {
+				p.next()
+			}
+		}
+	}
 	// Optional row actions: ACTIONS "Edit" -> "EditProc", "Delete" -> "DelProc"
 	if p.check(T_IDENTIFIER) && strings.ToUpper(p.peek().Lexeme) == "ACTIONS" {
 		p.next()
@@ -834,16 +844,6 @@ func (p *Parser) parseRunSQL() Stmt {
 			} else if p.check(T_IDENTIFIER) {
 				stmt.Actions = append(stmt.Actions, RowActionDef{Label: label, Procedure: p.next().Lexeme})
 			}
-			if p.check(T_COMMA) {
-				p.next()
-			}
-		}
-	}
-	// Optional search columns: SEARCH "Name", "Email"
-	if p.check(T_IDENTIFIER) && strings.ToUpper(p.peek().Lexeme) == "SEARCH" {
-		p.next()
-		for !p.atEnd() && p.peek().Type == T_STRING {
-			stmt.SearchCols = append(stmt.SearchCols, p.next().Lexeme)
 			if p.check(T_COMMA) {
 				p.next()
 			}

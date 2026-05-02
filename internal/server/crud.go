@@ -190,15 +190,25 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 50
 	}
 	sql := req.Query
-	// Add WHERE clause for search
+	// Add WHERE clause for search (multiple columns OR'd)
 	if req.Search != "" && req.SearchCol != "" {
-		where := fmt.Sprintf(" WHERE %s LIKE '%%%s%%'", req.SearchCol, strings.ReplaceAll(req.Search, "'", "''"))
-		// Insert WHERE before ORDER BY or at end
-		obIdx := strings.Index(strings.ToUpper(sql), "ORDER BY")
-		if obIdx >= 0 {
-			sql = sql[:obIdx] + where + " " + sql[obIdx:]
-		} else {
-			sql += where
+		cols := strings.Split(req.SearchCol, ",")
+		var conditions []string
+		escaped := strings.ReplaceAll(req.Search, "'", "''")
+		for _, c := range cols {
+			c = strings.TrimSpace(c)
+			if c != "" {
+				conditions = append(conditions, fmt.Sprintf("%s LIKE '%%%s%%'", c, escaped))
+			}
+		}
+		if len(conditions) > 0 {
+			where := " WHERE " + strings.Join(conditions, " OR ")
+			obIdx := strings.Index(strings.ToUpper(sql), "ORDER BY")
+			if obIdx >= 0 {
+				sql = sql[:obIdx] + where + " " + sql[obIdx:]
+			} else {
+				sql += where
+			}
 		}
 	}
 	// Strip any existing ORDER BY when a sort is requested

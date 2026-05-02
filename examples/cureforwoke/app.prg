@@ -3,14 +3,13 @@
 PROCEDURE MainMenu
   SET TITLE TO "The DeSantis Cure for Woke"
   SET TAGLINE TO "We'll straighten you out."
-  NAV "1" -> "CustomerMenu", "2" -> "ApptMenu", "3" -> "ServicesMenu", "4" -> "InvoiceMenu", "0" -> "QUIT"
+  NAV "1" -> "CustomerMenu", "2" -> "ApptMenu", "3" -> "ServicesMenu", "4" -> "InvoiceMenu"
   CLEAR
   @ 1, 1 SAY "1. Customer Management"
   @ 2, 1 SAY "2. Appointments"
   @ 3, 1 SAY "3. Services"
   @ 4, 1 SAY "4. Invoicing & Collections"
-  @ 6, 1 SAY "0. Exit"
-  @ 8, 1 SAY "Select: " GET mChoice PICTURE "9"
+  @ 6, 1 SAY "Select: " GET mChoice PICTURE "9"
   READ
 RETURN
 
