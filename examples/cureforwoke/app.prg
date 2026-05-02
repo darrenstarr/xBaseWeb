@@ -1,7 +1,7 @@
 && Application — all logic in xBase
 
 PROCEDURE MainMenu
-  SET TITLE TO "Ron DeSantis's Cure for Woke"
+  SET TITLE TO "The DeSantis Cure for Woke"
   SET TAGLINE TO "We'll straighten you out."
   NAV "1" -> "CustomerMenu", "2" -> "ApptMenu", "3" -> "ServicesMenu", "4" -> "InvoiceMenu", "0" -> "QUIT"
   CLEAR

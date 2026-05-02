@@ -91,7 +91,7 @@ function App() {
       const res = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ program: "examples/app.prg", procedure: proc, state: { input } }),
+        body: JSON.stringify({ program: "examples/cureforwoke/app.prg", procedure: proc, state: { input } }),
       });
       const data = await res.json();
       const s = data.screen as Screen;
@@ -104,17 +104,33 @@ function App() {
     } finally { setLoading(false); }
   };
 
+  const [toast, setToast] = React.useState<string>("");
+
   const handleRowAction = (action: RowAction, row: string[], keyCol: number) => {
     const key = row[keyCol] || "";
-    const table = action.procedure.includes("Service") ? "services" : "customers";
+
+    // Delete actions: confirm via overlay, then API call, then refresh list
+    if (action.label === "Delete") {
+      const table = action.procedure.includes("Service") ? "services"
+        : action.procedure.includes("Appt") ? "appointments"
+        : action.procedure.includes("Invoice") ? "invoices"
+        : "customers";
+      setScreen({ ...screen!, confirm: `Delete this ${table.slice(0, -1)}?` });
+      // Store the pending delete in a ref/state so the confirm handler knows what to do
+      setPendingDelete({ table, key, action, rowKey: key });
+      return;
+    }
+
+    // Edit actions: build input from row data
     const input: Record<string, string> = { mId: key };
-    if (table === "customers" && row.length >= 5) {
+    const tbl = action.procedure.includes("Service") ? "services" : "customers";
+    if (tbl === "customers" && row.length >= 5) {
       input.mName = row[1] || "";
       input.mAlias = row[2] || "";
       input.mPhone = row[3] || "";
       input.mEmail = "";
     }
-    if (table === "services" && row.length >= 4) {
+    if (tbl === "services" && row.length >= 4) {
       input.mName = row[1] || "";
       input.mDesc = row[2] || "";
       input.mPrice = row[3] || "";
@@ -122,10 +138,33 @@ function App() {
     runInterpreter(action.procedure, input);
   };
 
+  const [pendingDelete, setPendingDelete] = React.useState<{ table: string; key: string; action: RowAction; rowKey: string } | null>(null);
+
   const handleSubmit = async (directChoice?: string, confirmResult?: string) => {
     if (!screen) return;
 
-    // Handle confirmation response
+    // Handle confirmation response for pending deletes
+    if (screen.confirm && pendingDelete) {
+      if (confirmResult === "yes") {
+        try {
+          await fetch(`/api/data/${pendingDelete.table}/${pendingDelete.key}`, { method: "DELETE" });
+          setToast("Deleted!");
+          setTimeout(() => setToast(""), 2000);
+          setPendingDelete(null);
+          setScreen({ ...screen!, confirm: "", lines: [], fields: [] });
+          // Refresh the current list — don't pop stack, just re-run the list procedure
+          const listProc = currentProc;
+          setCurrentProc(procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC);
+          setTimeout(() => runInterpreter(listProc, {}), 100);
+        } catch { setToast("Delete failed"); }
+      } else {
+        setPendingDelete(null);
+        setScreen({ ...screen!, confirm: "" });
+      }
+      return;
+    }
+
+    // Handle confirmation response from .prg CONFIRM
     if (screen.confirm) {
       runInterpreter(currentProc, { ...fieldVals, _confirm: confirmResult || "yes" });
       return;
@@ -233,7 +272,7 @@ function App() {
 
           {/* Structured table rendering with sorting and infinite scroll */}
           {screen?.table && screen.table.columns.length > 0 && (
-            <TableWithScroll table={screen.table} theme={t} onRowAction={handleRowAction} />
+            <TableWithScroll table={screen.table} theme={t} onRowAction={handleRowAction} highlightKey={pendingDelete?.rowKey} />
           )}
 
           {(screen?.fields || []).filter(() => {
@@ -319,10 +358,16 @@ function App() {
       </main>
 
       {screen?.confirm && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, backgroundColor: t.surface || "#161b22", borderBottom: `2px solid ${t.accentRed || "#da3633"}`, padding: "16px 24px", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, backgroundColor: pendingDelete ? (t.surface || "#161b22") : (t.surface || "#161b22"), borderBottom: `2px solid ${pendingDelete ? (t.accentRed || "#da3633") : (t.accent || "#58a6ff")}`, padding: "16px 24px", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
           <span style={{ color: t.text, fontSize: 14 }}>{screen.confirm}</span>
-          <button onClick={() => handleSubmit(undefined, "yes")} style={{ padding: "6px 20px", backgroundColor: t.accentRed || "#da3633", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontFamily: t.font, fontSize: 13, fontWeight: "bold" }}>Yes</button>
+          <button onClick={() => handleSubmit(undefined, "yes")} style={{ padding: "6px 20px", backgroundColor: pendingDelete ? (t.accentRed || "#da3633") : (t.accent || "#58a6ff"), border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontFamily: t.font, fontSize: 13, fontWeight: "bold" }}>Yes</button>
           <button onClick={() => handleSubmit(undefined, "no")} style={{ padding: "6px 20px", backgroundColor: "transparent", border: `1px solid ${t.border}`, borderRadius: 4, color: t.textMuted, cursor: "pointer", fontFamily: t.font, fontSize: 13 }}>No</button>
+        </div>
+      )}
+
+      {toast && (
+        <div style={{ position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)", backgroundColor: t.accentGreen || "#3fb950", padding: "10px 24px", borderRadius: 8, zIndex: 1001, color: "#fff", fontSize: 14, fontWeight: "bold", fontFamily: t.font }}>
+          {toast}
         </div>
       )}
 
@@ -333,7 +378,7 @@ function App() {
   );
 }
 
-function TableWithScroll({ table, theme: t, onRowAction }: { table: TableData; theme: Record<string, string>; onRowAction: (act: RowAction, row: string[], keyCol: number) => void }) {
+function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table: TableData; theme: Record<string, string>; onRowAction: (act: RowAction, row: string[], keyCol: number) => void; highlightKey?: string }) {
   const [sortCol, setSortCol] = React.useState<string>("");
   const [sortDir, setSortDir] = React.useState<string>("asc");
   const [rows, setRows] = React.useState<string[][]>(table.rows);
@@ -412,8 +457,11 @@ function TableWithScroll({ table, theme: t, onRowAction }: { table: TableData; t
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, ri) => (
-              <tr key={ri}>
+            {rows.map((row, ri) => {
+              const rowId = row[table.keyCol ?? 0];
+              const isHighlighted = highlightKey && rowId === highlightKey;
+              return (
+              <tr key={ri} style={{ backgroundColor: isHighlighted ? (t.accentRed ? t.accentRed + "22" : "#330000") : undefined }}>
                 {visibleCols.map((col, ci) => {
                   const dataIdx = table.columns.findIndex(c => c.name === col.name);
                   return (

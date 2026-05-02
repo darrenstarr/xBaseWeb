@@ -79,12 +79,12 @@ func (s *Server) handleListTables(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "examples/app.json")
+	http.ServeFile(w, r, "examples/cureforwoke/app.json")
 }
 
 func (s *Server) handleGetForm(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	http.ServeFile(w, r, fmt.Sprintf("examples/forms/%s.json", name))
+	http.ServeFile(w, r, fmt.Sprintf("examples/cureforwoke/forms/%s.json", name))
 }
 
 func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
