@@ -93,19 +93,23 @@ PROCEDURE DeleteCustomer
     READ
     RETURN
   ENDIF
-  SELECT 0
-  USE customers ALIAS cust
-  LOCATE FOR cust->id = VAL(mId)
-  IF FOUND()
+  IF _confirm == ""
+    CONFIRM "Delete this customer?"
+    RETURN
+  ENDIF
+  IF _confirm == "yes"
+    SELECT 0
+    USE customers ALIAS cust
+    GO VAL(mId)
     DELETE
     PACK
+    CLOSE DATABASES
     CLEAR
     @ 2, 1 SAY "Customer deleted."
   ELSE
     CLEAR
-    @ 2, 1 SAY "Customer not found."
+    @ 2, 1 SAY "Delete cancelled."
   ENDIF
-  CLOSE DATABASES
   WAIT ""
 RETURN
 

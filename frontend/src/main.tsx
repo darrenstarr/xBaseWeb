@@ -6,7 +6,7 @@ interface ScreenField { row?: number; col?: number; var: string; picture?: strin
 interface TableColumn { name: string; align?: string }
 interface RowAction { label: string; procedure: string }
 interface TableData { columns: TableColumn[]; rows: string[][]; actions?: RowAction[]; keyCol?: number; query?: string; limit?: number; offset?: number; total?: number }
-interface Screen { lines: ScreenLine[]; fields: ScreenField[]; prompt?: string; wait?: boolean; done?: boolean; result?: string; table?: TableData; title?: string; tagline?: string; nav?: Record<string, string> }
+interface Screen { lines: ScreenLine[]; fields: ScreenField[]; prompt?: string; confirm?: string; wait?: boolean; done?: boolean; result?: string; table?: TableData; title?: string; tagline?: string; nav?: Record<string, string> }
 
 function applyMask(raw: string, mask: string): string {
     let ri = 0, out = "";
@@ -66,13 +66,24 @@ function App() {
       font: "'Courier New', monospace",
     }));
     runInterpreter(MAIN_MENU_PROC, {});
+    // Handle browser back button — navigate within app history
+    const handlePop = () => {
+      if (procStack.length > 0) {
+        const prev = procStack[procStack.length - 1];
+        setProcStack(p => p.slice(0, -1));
+        setCurrentProc(prev);
+        runInterpreter(prev, {});
+      }
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
   const runInterpreter = async (proc: string, input: Record<string, string>) => {
     setLoading(true);
-    // Track call stack: push current proc before switching
-    if (proc !== currentProc && currentProc !== MAIN_MENU_PROC) {
-      setProcStack(prev => [...prev, currentProc]);
+    // Push history state for browser back button support
+    if (proc !== currentProc) {
+      window.history.pushState({ proc: currentProc }, "", "");
     }
     setCurrentProc(proc);
     setFieldVals({});
@@ -93,15 +104,7 @@ function App() {
     } finally { setLoading(false); }
   };
 
-  const [confirmDelete, setConfirmDelete] = React.useState<{ action: RowAction; row: string[]; keyCol: number } | null>(null);
-
   const handleRowAction = (action: RowAction, row: string[], keyCol: number) => {
-    // Delete actions: show confirmation, then call API directly
-    if (action.label === "Delete") {
-      setConfirmDelete({ action, row, keyCol });
-      return;
-    }
-    // Edit actions: build input from row data
     const key = row[keyCol] || "";
     const table = action.procedure.includes("Service") ? "services" : "customers";
     const input: Record<string, string> = { mId: key };
@@ -119,31 +122,15 @@ function App() {
     runInterpreter(action.procedure, input);
   };
 
-  const doDelete = async () => {
-    if (!confirmDelete) return;
-    const { action, row, keyCol } = confirmDelete;
-    setConfirmDelete(null);
-    const key = row[keyCol] || "";
-    const table = action.procedure.includes("Service") ? "services"
-      : action.procedure.includes("Appt") ? "appointments"
-      : action.procedure.includes("Invoice") ? "invoices"
-      : "customers";
-    setLoading(true);
-    try {
-      await fetch(`/api/data/${table}/${key}`, { method: "DELETE" });
-      // Refresh the current list view
-      setScreen({ ...screen!, lines: [{ row: 1, col: 1, text: "Deleted!" }], fields: [], done: true });
-      setTimeout(() => {
-        const parent = procStack.length > 0 ? procStack[procStack.length - 1] : MAIN_MENU_PROC;
-        runInterpreter(parent, {});
-      }, 500);
-    } catch (e: any) {
-      setScreen({ ...screen!, lines: [{ row: 1, col: 1, text: `Delete failed: ${e.message}` }], fields: [], done: true });
-    } finally { setLoading(false); }
-  };
-
-  const handleSubmit = async (directChoice?: string) => {
+  const handleSubmit = async (directChoice?: string, confirmResult?: string) => {
     if (!screen) return;
+
+    // Handle confirmation response
+    if (screen.confirm) {
+      runInterpreter(currentProc, { ...fieldVals, _confirm: confirmResult || "yes" });
+      return;
+    }
+
     if (screen.done) {
       // Procedure finished — go back to caller via procStack
       if (procStack.length > 0) {
@@ -319,11 +306,11 @@ function App() {
         </div>
       </main>
 
-      {confirmDelete && (
+      {screen?.confirm && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, backgroundColor: t.surface || "#161b22", borderBottom: `2px solid ${t.accentRed || "#da3633"}`, padding: "16px 24px", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <span style={{ color: t.text, fontSize: 14 }}>Delete this record?</span>
-          <button onClick={doDelete} style={{ padding: "6px 20px", backgroundColor: t.accentRed || "#da3633", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontFamily: t.font, fontSize: 13, fontWeight: "bold" }}>Yes, Delete</button>
-          <button onClick={() => setConfirmDelete(null)} style={{ padding: "6px 20px", backgroundColor: "transparent", border: `1px solid ${t.border}`, borderRadius: 4, color: t.textMuted, cursor: "pointer", fontFamily: t.font, fontSize: 13 }}>Cancel</button>
+          <span style={{ color: t.text, fontSize: 14 }}>{screen.confirm}</span>
+          <button onClick={() => handleSubmit(undefined, "yes")} style={{ padding: "6px 20px", backgroundColor: t.accentRed || "#da3633", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontFamily: t.font, fontSize: 13, fontWeight: "bold" }}>Yes</button>
+          <button onClick={() => handleSubmit(undefined, "no")} style={{ padding: "6px 20px", backgroundColor: "transparent", border: `1px solid ${t.border}`, borderRadius: 4, color: t.textMuted, cursor: "pointer", fontFamily: t.font, fontSize: 13 }}>No</button>
         </div>
       )}
 

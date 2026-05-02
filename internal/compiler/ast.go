@@ -245,6 +245,13 @@ func (s *FunctionDef) stmtNode()   {}
 
 type ReadStmt struct{}
 
+type ConfirmStmt struct {
+	Message string
+}
+
+func (s *ConfirmStmt) nodeMarker() {}
+func (s *ConfirmStmt) stmtNode()   {}
+
 type NavStmt struct {
 	Entries map[string]string // choice -> procedure
 }

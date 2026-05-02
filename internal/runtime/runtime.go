@@ -278,6 +278,10 @@ func (rt *Runtime) interactiveStmt(stmt compiler.Stmt, atGet *bool) {
 		rt.Screen.Prompt = s.Var
 		panic(readSentinel{})
 
+	case *compiler.ConfirmStmt:
+		rt.Screen.Confirm = s.Message
+		panic(readSentinel{})
+
 	case *compiler.NavStmt:
 		rt.Screen.Nav = s.Entries
 

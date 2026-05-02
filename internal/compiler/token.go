@@ -93,6 +93,7 @@ const (
 	T_STEP
 	T_RUNSQL
 	T_NAV
+	T_CONFIRM
 	T_TEXT
 	T_ENDTEXT
 	T_SCATTER
@@ -227,6 +228,7 @@ var tokenNames = map[TokenType]string{
 	T_STEP:          "STEP",
 	T_RUNSQL:        "RUNSQL",
 	T_NAV:           "NAV",
+	T_CONFIRM:       "CONFIRM",
 	T_PLUS:          "+",
 	T_MINUS:         "-",
 	T_STAR:          "*",

@@ -167,6 +167,8 @@ func (p *Parser) parseStmt() Stmt {
 		return p.parseRunSQL()
 	case T_NAV:
 		return p.parseNav()
+	case T_CONFIRM:
+		return p.parseConfirm()
 	case T_CALL:
 		return p.parseCall()
 	case T_SET:
@@ -766,6 +768,15 @@ func (p *Parser) parseCall() *CallStmt {
 			stmt.Args = p.parseExprList()
 		}
 		p.expect(T_RPAREN)
+	}
+	return stmt
+}
+
+func (p *Parser) parseConfirm() Stmt {
+	p.next()
+	stmt := &ConfirmStmt{}
+	if p.check(T_STRING) {
+		stmt.Message = p.next().Lexeme
 	}
 	return stmt
 }

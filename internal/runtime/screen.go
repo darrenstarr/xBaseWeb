@@ -5,6 +5,7 @@ type Screen struct {
 	Lines   []ScreenLine     `json:"lines"`
 	Fields  []ScreenField    `json:"fields"`
 	Prompt  string           `json:"prompt,omitempty"`
+	Confirm string           `json:"confirm,omitempty"` // confirmation message
 	Wait    bool             `json:"wait,omitempty"`
 	Done    bool             `json:"done,omitempty"`
 	Result  string           `json:"result,omitempty"`
@@ -13,7 +14,7 @@ type Screen struct {
 	Table   *TableData       `json:"table,omitempty"`
 	Title   string           `json:"title,omitempty"`
 	Tagline string           `json:"tagline,omitempty"`
-	Nav     map[string]string `json:"nav,omitempty"` // choice -> procedure for menu navigation
+	Nav     map[string]string `json:"nav,omitempty"`
 }
 
 type ScreenLine struct {

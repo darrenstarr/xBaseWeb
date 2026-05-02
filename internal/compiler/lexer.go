@@ -477,6 +477,7 @@ var keywords = map[string]TokenType{
 	"STEP":       T_STEP,
 	"RUNSQL":     T_RUNSQL,
 	"NAV":        T_NAV,
+	"CONFIRM":    T_CONFIRM,
 	"TEXT":       T_TEXT,
 	"ENDTEXT":    T_ENDTEXT,
 	"SCATTER":    T_SCATTER,
