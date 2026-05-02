@@ -601,7 +601,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
                       textAlign: col.align === "right" ? "right" : col.align === "center" ? "center" : "left",
                       padding: "6px 12px", borderBottom: `1px solid ${t.border || "#30363d"}`,
                       color: t.text || "#c9d1d9", fontSize: 13,
-                      whiteSpace: "normal", wordBreak: "break-word",
+                      whiteSpace: "nowrap",
                     }}>{dataIdx >= 0 ? row[dataIdx] : ""}</td>
                   );
                 })}
