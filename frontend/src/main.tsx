@@ -131,6 +131,18 @@ function App() {
       return;
     }
 
+    // Wait/done screens: return to parent menu
+    if (screen.done || screen.wait) {
+      if (procStack.length > 0) {
+        const parent = procStack[procStack.length - 1];
+        setProcStack(prev => prev.slice(0, -1));
+        runInterpreter(parent, {});
+      } else {
+        runInterpreter(MAIN_MENU_PROC, {});
+      }
+      return;
+    }
+
     if (screen.done) {
       // Procedure finished — go back to caller via procStack
       if (procStack.length > 0) {
