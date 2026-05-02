@@ -217,7 +217,7 @@ RETURN
 PROCEDURE ListServices
   CLEAR
   @ 1, 1 SAY "--- Service List ---"
-  RUNSQL "SELECT id, name, duration, base_price, intensity, description FROM services ORDER BY id" COLUMNS "ID", "Name", "Duration", "Price", "Intensity", "Description" ACTIONS "Edit" -> "EditService", "Delete" -> "DeleteService"
+  RUNSQL "SELECT id, name, duration, base_price, intensity, description FROM services ORDER BY id" COLUMNS "ID", "Name", "Duration", "Price", "Intensity", "Description" SEARCH "Name", "Description" ACTIONS "Edit" -> "EditService", "Delete" -> "DeleteService"
 RETURN
 
 PROCEDURE DeleteService
