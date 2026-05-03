@@ -100,6 +100,10 @@ function App() {
       setScreen(s);
       const init: Record<string, string> = {};
       s?.fields?.forEach((f: ScreenField) => { init[f.var] = f.value || ""; });
+      // Preserve input values that aren't form fields (like mId, _confirm)
+      for (const k of Object.keys(input)) {
+        if (init[k] === undefined) init[k] = input[k];
+      }
       if (Object.keys(init).length > 0) setFieldVals(init);
       if (s?.title) setAppTitle(s.title);
       if (s?.tagline) setAppTagline(s.tagline);
