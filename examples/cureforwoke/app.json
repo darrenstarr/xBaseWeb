@@ -1,4 +1,5 @@
 {
+  "program": "examples/cureforwoke/app.prg",
   "name": "db4web",
   "tagline": "xBase interpreter for the web",
   "theme": {

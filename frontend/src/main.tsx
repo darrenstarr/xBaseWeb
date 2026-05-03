@@ -52,6 +52,7 @@ function App() {
   const [navStack, setNavStack] = React.useState<string[]>([]);
   const [appTitle, setAppTitle] = React.useState("db4web");
   const [appTagline, setAppTagline] = React.useState("");
+  const [programPath, setProgramPath] = React.useState("examples/cureforwoke/app.prg");
 
   const goBack = () => {
     if (navStack.length > 0) {
@@ -62,7 +63,10 @@ function App() {
   };
 
   React.useEffect(() => {
-    fetch("/api/workspace").then(r => r.json()).then((c: any) => setTheme(c.theme)).catch(() => setTheme({
+    fetch("/api/workspace").then(r => r.json()).then((c: any) => {
+      setTheme(c.theme);
+      if (c.program) setProgramPath(c.program);
+    }).catch(() => setTheme({
       background: "#0d1117", surface: "#161b22", text: "#c9d1d9", textMuted: "#8b949e",
       accent: "#58a6ff", accentGreen: "#3fb950", accentRed: "#da3633", border: "#30363d",
       font: "'Courier New', monospace",
@@ -93,7 +97,7 @@ function App() {
       const res = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ program: "examples/cureforwoke/app.prg", procedure: proc, state: { input } }),
+        body: JSON.stringify({ program: programPath, procedure: proc, state: { input } }),
       });
       const data = await res.json();
       const s = data.screen as Screen;
@@ -165,7 +169,7 @@ function App() {
           const res = await fetch("/api/execute", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ program: "examples/cureforwoke/app.prg", procedure: savedProc, state: {} }),
+            body: JSON.stringify({ program: programPath, procedure: savedProc, state: {} }),
           });
           const data = await res.json();
           const s = data.screen as Screen;
