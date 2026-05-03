@@ -274,8 +274,8 @@ function App() {
       return;
     }
 
-    // No nav mapping — send form values back to current procedure
-    runInterpreter(currentProc, fieldVals);
+    // No nav mapping — mark as form submission and send back
+    runInterpreter(currentProc, { ...fieldVals, _save: "yes" });
   };
 
   const t = theme || {};

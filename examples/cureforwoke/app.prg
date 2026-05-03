@@ -41,7 +41,7 @@ PROCEDURE EditCustomer
     READ
     RETURN
   ENDIF
-  IF mEmail <> ""
+  IF _save == "yes"
     SELECT 0
     USE customers ALIAS cust
     GO VAL(mId)
@@ -55,7 +55,6 @@ PROCEDURE EditCustomer
     WAIT ""
     RETURN
   ENDIF
-  && Show edit form with pre-filled values from row action
   CLEAR
   @ 1, 1 SAY "--- Edit Customer ---"
   @ 3, 1 SAY "Name:  " GET mName PICTURE "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
@@ -168,7 +167,7 @@ PROCEDURE EditService
     READ
     RETURN
   ENDIF
-  IF mDuration <> ""
+  IF _save == "yes"
     SELECT 0
     USE services ALIAS svc
     GO VAL(mId)
