@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 interface ScreenLine { row?: number; col?: number; text: string }
-interface ScreenField { row?: number; col?: number; var: string; picture?: string; value?: string; type: string; options?: { value: string; label: string }[] }
+interface ScreenField { row?: number; col?: number; var: string; picture?: string; value?: string; type: string; options?: { value: string; label: string; search?: string }[] }
 interface TableColumn { name: string; align?: string }
 interface RowAction { label: string; procedure: string }
 interface TableData { columns: TableColumn[]; rows: string[][]; actions?: RowAction[]; keyCol?: number; query?: string; limit?: number; offset?: number; total?: number; searchCols?: string[] }
@@ -203,8 +203,8 @@ function App() {
             fetch("/api/data/customers").then(r => r.json()),
             fetch("/api/data/services").then(r => r.json()),
           ]);
-          const custOpts = (custData.rows || []).map((c: any) => ({ value: String(c.id), label: `${c.name || ""}${c.alias ? " (" + c.alias + ")" : ""}` }));
-          const svcOpts = (svcData.rows || []).map((s: any) => ({ value: String(s.id), label: `${s.name || ""} — $${parseFloat(s.base_price || "0").toFixed(0)}` }));
+          const custOpts = (custData.rows || []).map((c: any) => ({ value: String(c.id), label: `${c.name || ""}${c.alias ? " (" + c.alias + ")" : ""}`, search: `${c.name || ""} ${c.alias || ""} ${c.phone || ""}` }));
+          const svcOpts = (svcData.rows || []).map((s: any) => ({ value: String(s.id), label: `${s.name || ""} — $${parseFloat(s.base_price || "0").toFixed(0)}`, search: `${s.name || ""} ${s.description || ""}` }));
           setScreen({
             lines: [{ row: 1, col: 1, text: "Schedule Appointment" }],
             fields: [
@@ -704,7 +704,7 @@ function TableWithScroll({ table, theme: t, onRowAction, highlightKey }: { table
 }
 
 function AutoComplete({ options, value, onChange, theme: t, autoFocus }: {
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; search?: string }[];
   value: string;
   onChange: (v: string) => void;
   theme: Record<string, string>;
@@ -712,42 +712,127 @@ function AutoComplete({ options, value, onChange, theme: t, autoFocus }: {
 }) {
   const [text, setText] = React.useState(options.find(o => o.value === value)?.label ?? "");
   const [open, setOpen] = React.useState(false);
+  const [focusIdx, setFocusIdx] = React.useState(-1);
   const ref = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
 
-  // Close on outside click
+  const sorted = [...options].sort((a, b) => a.label.localeCompare(b.label));
+  const filtered = text
+    ? sorted.filter(o => {
+        const q = text.toLowerCase();
+        const searchText = (o.search || o.label).toLowerCase();
+        return searchText.includes(q);
+      })
+    : sorted;
+
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    window.addEventListener("click", handler);
-    return () => window.removeEventListener("click", handler);
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Update text when value changes externally
   React.useEffect(() => {
-    setText(options.find(o => o.value === value)?.label ?? "");
+    const cur = options.find(o => o.value === value);
+    setText(cur?.label ?? "");
   }, [value, options]);
 
-  const filtered = text ? options.filter(o => o.label.toLowerCase().includes(text.toLowerCase())) : options;
+  const select = (idx: number) => {
+    if (idx < 0 || idx >= filtered.length) return;
+    onChange(filtered[idx].value);
+    setText(filtered[idx].label);
+    setOpen(false);
+    setFocusIdx(-1);
+  };
+
+  const keyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setOpen(false);
+      setFocusIdx(-1);
+      inputRef.current?.blur();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "ArrowDown") {
+      e.preventDefault();
+      setOpen(true);
+      setFocusIdx(-1);
+      return;
+    }
+    if (!open) {
+      if (e.key === "Tab") return; // normal tab behavior
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setOpen(true);
+        return;
+      }
+      return;
+    }
+    // Dropdown is open
+    if (e.key === "Tab") {
+      if (e.shiftKey) {
+        // Shift+Tab: close and focus previous
+        setOpen(false);
+        return;
+      }
+      e.preventDefault();
+      if (document.activeElement === inputRef.current) {
+        // Focus dropdown list
+        listRef.current?.focus();
+        return;
+      }
+      // Focused on dropdown → close and tab to next
+      setOpen(false);
+      // Synthesize a tab keypress on the input
+      inputRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusIdx(i => Math.min(i + 1, filtered.length - 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusIdx(i => Math.max(i - 1, 0));
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (focusIdx >= 0) { select(focusIdx); return; }
+      if (filtered.length === 1) { select(0); return; }
+    }
+  };
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <input autoFocus={autoFocus} value={text}
-        onChange={e => { setText(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Search..."
-        style={{
-          backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: 4,
-          padding: "10px 14px", fontFamily: t.font, fontSize: 16, color: t.text, outline: "none",
-          width: 300, boxSizing: "border-box",
-        }} />
+      <div style={{ display: "flex" }}>
+        <input ref={inputRef} autoFocus={autoFocus} value={text}
+          onChange={e => { setText(e.target.value); setOpen(true); setFocusIdx(-1); }}
+          onFocus={() => {/* don't auto-open */}}
+          onKeyDown={keyDown}
+          placeholder="Search..."
+          style={{
+            flex: 1, backgroundColor: t.background, border: `1px solid ${t.border}`, borderRadius: "4px 0 0 4px",
+            padding: "10px 14px", fontFamily: t.font, fontSize: 16, color: t.text, outline: "none",
+          }} />
+        <button onClick={() => { setOpen(!open); if (!open) inputRef.current?.focus(); }}
+          style={{
+            backgroundColor: t.background, border: `1px solid ${t.border}`, borderLeft: "none", borderRadius: "0 4px 4px 0",
+            padding: "0 12px", cursor: "pointer", color: t.textMuted, fontSize: 12, fontFamily: t.font,
+          }}>▼</button>
+      </div>
       {open && (
-        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: t.surface || "#161b22", border: `1px solid ${t.border}`, borderRadius: 4, zIndex: 20, maxHeight: 250, overflowY: "auto", marginTop: 2 }}>
+        <div ref={listRef} tabIndex={-1} onKeyDown={keyDown}
+          style={{ position: "absolute", top: "100%", left: 0, right: 0, backgroundColor: t.surface || "#161b22", border: `1px solid ${t.border}`, borderRadius: 4, zIndex: 20, maxHeight: 300, overflowY: "auto", marginTop: 2, outline: "none" }}>
           {filtered.map((o, i) => (
-            <div key={i} onClick={() => { onChange(o.value); setText(o.label); setOpen(false); }}
-              style={{ padding: "8px 12px", cursor: "pointer", fontSize: 14, color: t.text, borderBottom: i < filtered.length - 1 ? `1px solid ${t.border}` : "none" }}
-              onMouseEnter={e => e.currentTarget.style.background = t.background || "#0d1117"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >{o.label}</div>
+            <div key={i} onClick={() => select(i)}
+              onMouseEnter={() => setFocusIdx(i)}
+              style={{
+                padding: "8px 12px", cursor: "pointer", fontSize: 14, color: t.text,
+                backgroundColor: i === focusIdx ? (t.accent + "22") : "transparent",
+                borderBottom: i < filtered.length - 1 ? `1px solid ${t.border}` : "none",
+              }}>{o.label}</div>
           ))}
           {filtered.length === 0 && <div style={{ padding: "8px 12px", color: t.textMuted, fontSize: 13, fontStyle: "italic" }}>No matches</div>}
         </div>
